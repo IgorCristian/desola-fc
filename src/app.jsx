@@ -20,6 +20,7 @@ const CLUB_INFO = {
     capacidade: 40000,
     local: "São Paulo, SP"
   },
+  
   cores: { principal: "#edc515", secundaria: "#000000" },
   competicoes: ["Campeonato Paulista", "Brasileirão Série A"]
 };
