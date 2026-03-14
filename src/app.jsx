@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, CheckCircle, XCircle, Clock, Building, User } from 'lucide-react';
 
 // ==========================================
-// 1. DADOS SIMULADOS (Mock Data)
-// Estes dados representam o que virá do Firebase no futuro.
+// 1. IMPORTAÇÕES DO FIREBASE (Do ficheiro local)
+// ==========================================
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { collection, onSnapshot, addDoc } from 'firebase/firestore';
+import { auth, db } from './firebase'; // Importa a auth e db que configuraste no passo 1
+
+// ==========================================
+// 2. DADOS SIMULADOS (Mock Data)
 // ==========================================
 const CLUB_INFO = {
   nome: "De Sola FC",
@@ -33,11 +39,6 @@ const INITIAL_PLAYERS = [
 
 const TROPHIES = [
   { id: 1, nome: "Warner Cup", ano: 2026, icone: "🏆" }
-];
-
-const INITIAL_COMMENTS = [
-  { id: 1, autor: "@adeptofanatico", texto: "Rumo ao título do Paulistão! Vamo De Sola!", data: "14/03/2026", avatar: "https://ui-avatars.com/api/?name=AF&background=edc515&color=000&rounded=true&bold=true" },
-  { id: 2, autor: "@walaceborges", texto: "A estrutura tá absurda, vamos voar esse ano!", data: "13/03/2026", avatar: "https://ui-avatars.com/api/?name=WB&background=edc515&color=000&rounded=true&bold=true" }
 ];
 
 const MOCK_MATCHES = [
@@ -88,57 +89,108 @@ const MOCK_WARNER_CUP_STANDINGS = [
 ];
 
 // ==========================================
-// 2. COMPONENTE PRINCIPAL
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 export default function App() {
-  // O 'useState' guarda qual aba está ativa no momento.
   const [activeTab, setActiveTab] = useState('home');
-  // Novo 'useState' para controlar qual campeonato estamos a ver
   const [activeTournament, setActiveTournament] = useState('paulistao');
   
-  const [comments, setComments] = useState(INITIAL_COMMENTS);
+  // ESTADOS DO FIREBASE
+  const [user, setUser] = useState(null);
+  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  // Adicionamos a memória para o campo do @
   const [newHandle, setNewHandle] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Função para adicionar um novo comentário na memória
-  const handleAddComment = (e) => {
+  // EFEITO 1: Fazer login anónimo no Firebase automaticamente
+  useEffect(() => {
+    // Se não tiver auth configurada, não faz nada
+    if (!auth) return;
+
+    const initAuth = async () => {
+      try {
+        await signInAnonymously(auth);
+      } catch (error) {
+        console.error("Erro na autenticação anónima:", error);
+      }
+    };
+    initAuth();
+
+    // Ouve mudanças
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // EFEITO 2: Buscar os comentários em tempo real
+  useEffect(() => {
+    if (!user || !db) {
+      setLoading(false);
+      return;
+    }
+
+    const commentsRef = collection(db, 'comentarios');
+    
+    const unsubscribe = onSnapshot(commentsRef, (snapshot) => {
+      const fetchedComments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Ordena do mais recente
+      fetchedComments.sort((a, b) => b.timestamp - a.timestamp);
+      setComments(fetchedComments);
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao buscar comentários:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // FUNÇÃO: Enviar comentário
+  const handleAddComment = async (e) => {
     e.preventDefault();
     if (newComment.trim() === "") return;
     
-    // Pega o @ ou define como Visitante
-    let formatHandle = newHandle.trim() === "" ? "Visitante" : newHandle.trim();
+    if (!user || !db) {
+      alert("Aguarde a conexão com o servidor do Firebase.");
+      return;
+    }
     
-    // Se a pessoa esqueceu do @, a gente coloca pra ela
+    let formatHandle = newHandle.trim() === "" ? "Visitante" : newHandle.trim();
     if (formatHandle !== "Visitante" && !formatHandle.startsWith('@')) {
       formatHandle = `@${formatHandle}`;
     }
-    
-    // Limpa caracteres chatos só pra API do avatar não dar erro
     const avatarName = formatHandle.replace(/[@_.]/g, '');
 
-    const comment = {
-      id: Date.now(),
-      autor: formatHandle,
-      texto: newComment,
-      data: new Date().toLocaleDateString('pt-BR'),
-      // Cria a foto redondinha na cor amarela
-      avatar: `https://ui-avatars.com/api/?name=${avatarName || 'V'}&background=edc515&color=000&rounded=true&bold=true`
-    };
-    
-    setComments([comment, ...comments]);
-    setNewComment(""); // Limpa o campo de texto
-    setNewHandle(""); // Limpa o campo do @
+    try {
+      const commentsRef = collection(db, 'comentarios');
+      await addDoc(commentsRef, {
+        autor: formatHandle,
+        texto: newComment,
+        data: new Date().toLocaleDateString('pt-BR'),
+        avatar: `https://ui-avatars.com/api/?name=${avatarName || 'V'}&background=edc515&color=000&rounded=true&bold=true`,
+        timestamp: Date.now()
+      });
+      
+      setNewComment("");
+      setNewHandle("");
+    } catch (error) {
+      console.error("Erro ao salvar comentário:", error);
+      alert("Erro ao enviar mensagem.");
+    }
   };
 
   // ==========================================
-  // 3. TELAS DO APLICATIVO (Componentes Visuais)
+  // 4. TELAS DO APLICATIVO
   // ==========================================
 
-  // TELA 1: Início (Visão Geral - Estilo Real Madrid Dark)
   const renderHome = () => (
-    <div className="space-y-12">
-      {/* Barra de Topo - Próximo Jogo */}
+    <div className="space-y-12 animate-fadeIn">
+      {/* Barra de Topo */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
         <div className="flex flex-col text-center md:text-left">
           <span className="text-zinc-400 text-xs uppercase font-bold tracking-wider">Paulistão • Jornada 8 • Estádio Gilzão</span>
@@ -192,7 +244,6 @@ export default function App() {
         <div className="flex justify-between items-end mb-6">
           <h3 className="text-3xl font-bold text-white">Próximos eventos</h3>
         </div>
-        {/* Usamos classes Tailwind para esconder a scrollbar nativa mas manter o scroll horizontal */}
         <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {MOCK_MATCHES.map(match => (
             <div key={match.id} className="min-w-[300px] md:min-w-[340px] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 snap-start hover:border-[#edc515]/50 transition-colors cursor-pointer group flex flex-col justify-between shadow-lg">
@@ -228,7 +279,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Vai e Vem do Mercado (Estilo GE) */}
+      {/* Vai e Vem do Mercado */}
       <div>
         <div className="flex justify-between items-end mb-6">
           <h3 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -240,12 +291,8 @@ export default function App() {
           {MOCK_TRANSFERS.map(transfer => {
             return (
               <div key={transfer.id} className="min-w-[280px] w-[280px] bg-zinc-900 border border-zinc-800 hover:border-[#edc515]/50 transition-colors rounded-2xl overflow-hidden snap-start flex flex-col relative group shadow-lg">
-                
-                {/* Marca d'água no fundo do cartão */}
                 <Shirt className="absolute -right-8 -top-8 text-zinc-800/30 w-48 h-48 -rotate-12 pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-                
                 <div className="p-5 relative z-10">
-                  {/* De -> Para & Badge de Chegada/Saída */}
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex flex-col gap-1 text-[11px] font-bold uppercase tracking-wider">
                       <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1.5 rounded border border-zinc-800">
@@ -260,30 +307,21 @@ export default function App() {
                       {transfer.tipo}
                     </div>
                   </div>
-
-                  {/* Nome e Posição */}
                   <h4 className="text-2xl font-black text-white leading-tight mb-1">{transfer.jogador}</h4>
                   <p className="text-[#edc515] text-xs font-bold uppercase tracking-wider mb-2">{transfer.posicao}</p>
                 </div>
-
-                {/* Imagem do Jogador no centro com botão "Ativar som" simulado */}
                 <div className="relative h-40 w-full bg-zinc-800 z-10 border-y border-zinc-800 overflow-hidden">
                   <img src={transfer.img} alt={transfer.jogador} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  {/* Etiqueta de mídia (como no GE) */}
                   <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-2 py-1 rounded flex items-center gap-1">
                     Vídeo / Lances
                   </div>
                 </div>
-
-                {/* Valor / Info / Título da Notícia */}
                 <div className="p-5 z-10 flex-grow">
                   <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">
                     {transfer.tipo === 'CHEGADA' ? 'Novo Reforço' : 'Deixou o Clube'}
                   </p>
                   <p className="text-white font-medium text-sm leading-snug">{transfer.valor}</p>
                 </div>
-
-                {/* Footer (Ações) */}
                 <div className="bg-zinc-950 p-4 flex justify-end items-center z-10 border-t border-zinc-800">
                   <div className="flex gap-2">
                     <button className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors border border-red-500/20">
@@ -302,14 +340,12 @@ export default function App() {
     </div>
   );
 
-  // TELA 2: Elenco (Estilo Chelsea FC)
+  // TELA 2: Elenco
   const renderElenco = () => {
-    // Definimos a ordem exata em que queremos que as secções apareçam
     const grupos = ["Goleiros", "Defensores", "Meio-campistas", "Atacantes"];
 
     return (
       <div className="space-y-12">
-        {/* Secção da Comissão Técnica */}
         <div className="bg-zinc-900 border border-[#edc515]/30 p-8 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg">
           <div>
             <h3 className="text-sm font-bold text-[#edc515] uppercase tracking-widest mb-1">Equipa Técnica</h3>
@@ -317,18 +353,13 @@ export default function App() {
             <p className="text-zinc-400 mt-2">Treinador Principal • Preparando a equipa para a glória no Paulistão</p>
           </div>
           <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-[#edc515]/20 shrink-0">
-            {/* Imagem genérica para o técnico */}
             <img src="https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?q=80&w=400&auto=format&fit=crop" alt={CLUB_INFO.tecnico} className="w-full h-full object-cover" />
           </div>
         </div>
 
-        {/* Listagem de Jogadores por Posição */}
         <div className="space-y-12 mt-8">
           {grupos.map(grupo => {
-            // Filtra os jogadores pertencentes a este grupo
             const jogadoresDoGrupo = INITIAL_PLAYERS.filter(j => j.grupo === grupo);
-            
-            // Se não houver jogadores contratados para esta posição, não renderiza a secção
             if (jogadoresDoGrupo.length === 0) return null;
 
             return (
@@ -337,23 +368,15 @@ export default function App() {
                   <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span>
                   {grupo}
                 </h3>
-                
-                {/* Grid Responsiva: 2 colunas no telemóvel, 5 colunas em monitores grandes */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-6">
                   {jogadoresDoGrupo.map(jogador => (
                     <div key={jogador.id} className="bg-zinc-900 border border-zinc-800 relative group overflow-hidden flex flex-col rounded-sm hover:border-[#edc515]/50 transition-all cursor-pointer shadow-md hover:shadow-xl hover:shadow-[#edc515]/5">
-                      
-                      {/* Número em grande (Estilo Chelsea) */}
                       <div className="absolute top-2 left-3 text-4xl md:text-5xl font-black text-white/10 group-hover:text-[#edc515]/80 transition-colors z-10 pointer-events-none">
                         {jogador.numero}
                       </div>
-                      
-                      {/* Imagem do Jogador (Proporção Retrato) */}
                       <div className="aspect-[3/4] overflow-hidden bg-zinc-800/50">
                         <img src={jogador.img} alt={jogador.nome} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0" />
                       </div>
-                      
-                      {/* Bloco de Informações na base */}
                       <div className="p-4 bg-zinc-950 border-t border-zinc-800 group-hover:border-[#edc515] transition-colors relative z-20 flex-grow flex flex-col justify-end">
                         <p className="text-xs text-zinc-400 font-medium mb-0.5">{jogador.nome}</p>
                         <h4 className="text-lg md:text-xl font-black text-white uppercase leading-none mb-1.5 tracking-wide">{jogador.sobrenome}</h4>
@@ -374,133 +397,71 @@ export default function App() {
     );
   };
 
-  // TELA 3: Estrutura (Estádio e CT)
+  // TELA 3: Estrutura
   const renderEstrutura = () => (
     <div className="space-y-16 animate-fadeIn">
-      
-      {/* Hero - Fachada do Estádio */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl relative group cursor-pointer">
         <div className="h-80 md:h-[450px] overflow-hidden">
-          {/* Imagem principal do estádio */}
-          <img 
-            src="https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1200" 
-            alt="Fachada do Estádio Gilzão" 
-            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-          />
+          <img src="https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1200" alt="Fachada do Estádio" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
         </div>
-        
-        {/* Gradiente para o texto ficar legível */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-        
-        {/* Informações do Estádio sobrepostas na imagem */}
         <div className="absolute bottom-0 left-0 w-full p-6 md:p-10">
-          <h2 className="text-4xl md:text-6xl font-black text-[#edc515] uppercase tracking-wide mb-4 drop-shadow-lg">
-            {CLUB_INFO.estadio.nome}
-          </h2>
+          <h2 className="text-4xl md:text-6xl font-black text-[#edc515] uppercase tracking-wide mb-4 drop-shadow-lg">{CLUB_INFO.estadio.nome}</h2>
           <div className="flex flex-wrap gap-4 md:gap-8 text-sm md:text-base font-bold uppercase tracking-wider text-zinc-300">
-            <span className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-zinc-700/50">
-              <MapPin size={20} className="text-[#edc515]" /> {CLUB_INFO.estadio.local}
-            </span>
-            <span className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-zinc-700/50">
-              <Users size={20} className="text-[#edc515]" /> {CLUB_INFO.estadio.capacidade.toLocaleString()} Torcedores
-            </span>
+            <span className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-zinc-700/50"><MapPin size={20} className="text-[#edc515]" /> {CLUB_INFO.estadio.local}</span>
+            <span className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-zinc-700/50"><Users size={20} className="text-[#edc515]" /> {CLUB_INFO.estadio.capacidade.toLocaleString()} Torcedores</span>
           </div>
         </div>
       </div>
 
-      {/* Secção: Por dentro do Estádio */}
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-3 flex items-center gap-3">
-          <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span>
-          Por dentro do Gilzão
+          <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span> Por dentro do Gilzão
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {/* Card 1: Relvado */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=600" alt="Gramado" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-            </div>
-            <div className="p-4 bg-zinc-950">
-              <h4 className="text-white font-bold text-lg">Gramado Padrão FIFA</h4>
-              <p className="text-zinc-500 text-sm mt-1">Tapete impecável para o estilo de jogo do De Sola.</p>
-            </div>
+            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=600" alt="Gramado" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Gramado Padrão FIFA</h4><p className="text-zinc-500 text-sm mt-1">Tapete impecável para o estilo de jogo do De Sola.</p></div>
           </div>
-          {/* Card 2: Bancadas */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600" alt="Arquibancada" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-            </div>
-            <div className="p-4 bg-zinc-950">
-              <h4 className="text-white font-bold text-lg">Setor da Torcida Organizada</h4>
-              <p className="text-zinc-500 text-sm mt-1">Onde a pulsação da claque empurra a equipa.</p>
-            </div>
+            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600" alt="Arquibancada" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Setor da Torcida Organizada</h4><p className="text-zinc-500 text-sm mt-1">Onde a pulsação da claque empurra a equipa.</p></div>
           </div>
-          {/* Card 3: Balneários */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden relative">
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div>
-              <img src="https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?q=80&w=600" alt="Vestiário" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-            </div>
-            <div className="p-4 bg-zinc-950">
-              <h4 className="text-white font-bold text-lg">Vestiário Principal</h4>
-              <p className="text-zinc-500 text-sm mt-1">Onde as preleções históricas do Guar De Sola acontecem.</p>
-            </div>
+            <div className="h-48 overflow-hidden relative"><div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div><img src="https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?q=80&w=600" alt="Vestiário" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Vestiário Principal</h4><p className="text-zinc-500 text-sm mt-1">Onde as preleções históricas do Guar De Sola acontecem.</p></div>
           </div>
         </div>
       </div>
 
-      {/* Secção: Centro de Treinamento */}
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-3 flex items-center gap-3">
-          <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span>
-          Centro de Treinamento (CT)
+          <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span> Centro de Treinamento (CT)
         </h3>
         <p className="text-zinc-400">Estrutura de ponta para preparar os nossos craques para os maiores desafios da temporada.</p>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {/* Card 1: Campos de Treino */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1551280918-62287950c459?q=80&w=600" alt="Campos de Treino" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-            </div>
-            <div className="p-4 bg-zinc-950">
-              <h4 className="text-[#edc515] font-bold text-lg">Campos Anexos</h4>
-              <p className="text-zinc-500 text-sm mt-1">Três campos com dimensões oficiais para trabalhos táticos.</p>
-            </div>
+            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1551280918-62287950c459?q=80&w=600" alt="Campos de Treino" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Campos Anexos</h4><p className="text-zinc-500 text-sm mt-1">Três campos com dimensões oficiais para trabalhos táticos.</p></div>
           </div>
-          {/* Card 2: Ginásio/Academia */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600" alt="Academia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-            </div>
-            <div className="p-4 bg-zinc-950">
-              <h4 className="text-[#edc515] font-bold text-lg">Academia de Alta Performance</h4>
-              <p className="text-zinc-500 text-sm mt-1">Equipamentos de última geração para o preparo físico.</p>
-            </div>
+            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600" alt="Academia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Academia de Alta Performance</h4><p className="text-zinc-500 text-sm mt-1">Equipamentos de última geração para o preparo físico.</p></div>
           </div>
-          {/* Card 3: Departamento Médico */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=600" alt="Departamento Médico" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-            </div>
-            <div className="p-4 bg-zinc-950">
-              <h4 className="text-[#edc515] font-bold text-lg">Departamento Médico</h4>
-              <p className="text-zinc-500 text-sm mt-1">Centro de recuperação e fisioterapia avançada.</p>
-            </div>
+            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=600" alt="Departamento Médico" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Departamento Médico</h4><p className="text-zinc-500 text-sm mt-1">Centro de recuperação e fisioterapia avançada.</p></div>
           </div>
         </div>
       </div>
-
     </div>
   );
 
   // TELA 4: Troféus
   const renderTrofeus = () => (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-        <Trophy className="text-[#edc515]" size={32} /> Galeria de Troféus
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <h2 className="text-3xl font-bold text-white flex items-center gap-3"><Trophy className="text-[#edc515]" size={32} /> Galeria de Troféus</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
         {TROPHIES.map(trofeu => (
           <div key={trofeu.id} className="bg-zinc-900 border border-[#edc515]/50 p-8 rounded-xl flex flex-col items-center text-center transform transition hover:-translate-y-2 hover:shadow-[0_0_15px_rgba(237,197,21,0.2)]">
             <span className="text-6xl mb-4 drop-shadow-lg">{trofeu.icone}</span>
@@ -508,7 +469,6 @@ export default function App() {
             <p className="text-[#edc515] font-medium mt-2">Campeão - {trofeu.ano}</p>
           </div>
         ))}
-        {/* Espaço vazio para futuros títulos */}
         <div className="bg-zinc-950 border-2 border-dashed border-zinc-800 p-8 rounded-xl flex flex-col items-center justify-center text-center opacity-50">
           <Trophy className="text-zinc-700 mb-4" size={48} />
           <p className="text-zinc-500 font-medium">Espaço reservado para o Brasileirão</p>
@@ -517,68 +477,92 @@ export default function App() {
     </div>
   );
 
-  // TELA 5: Torcida (Interativa)
+  // TELA 5: Torcida (LIGADA AO FIREBASE)
   const renderTorcida = () => (
-    <div className="space-y-6 max-w-3xl mx-auto animate-fadeIn">
-      <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl shadow-lg">
-        <h2 className="text-2xl font-bold text-[#edc515] mb-6 flex items-center gap-3">
-          <MessageSquare /> Voz da Torcida
+    <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
+      <div className="bg-zinc-900 border border-zinc-800 p-6 md:p-10 rounded-xl shadow-lg">
+        <h2 className="text-2xl font-bold text-[#edc515] mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <span className="flex items-center gap-3"><MessageSquare /> Voz da Torcida</span>
+          
+          {/* Se a auth ou db não existirem, mostra aviso (sinal de que falta ligar algo) */}
+          {(!auth || !db) && (
+            <span className="text-xs bg-red-500/20 text-red-500 border border-red-500/50 px-3 py-1 rounded-full animate-pulse flex items-center gap-1">
+              ⚠️ Banco de Dados Desconectado
+            </span>
+          )}
         </h2>
         
-        {/* Formulário de comentários */}
-        <form onSubmit={handleAddComment} className="mb-10 bg-zinc-950 p-5 rounded-lg border border-zinc-800">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-500 shrink-0">
-              <User size={20} />
+        <form onSubmit={handleAddComment} className="mb-10 bg-zinc-950 p-6 md:p-8 rounded-lg border border-zinc-800">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-500 shrink-0">
+              <User size={24} />
             </div>
             <input
               type="text"
               value={newHandle}
               onChange={(e) => setNewHandle(e.target.value)}
               placeholder="Seu @ (ex: @certezas)"
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-3 text-white focus:outline-none focus:border-[#edc515] transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-4 text-white focus:outline-none focus:border-[#edc515] transition-colors text-lg disabled:opacity-50"
+              disabled={!auth || !db}
             />
           </div>
           <textarea 
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Deixe sua mensagem de apoio ao time..."
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-4 text-white focus:outline-none focus:border-[#edc515] resize-none h-24 mb-4 transition-colors"
+            placeholder={(!auth || !db) ? "Configure o Firebase primeiro no ficheiro firebase.js..." : "Deixe sua mensagem de apoio ao time..."}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-5 text-white focus:outline-none focus:border-[#edc515] resize-none h-32 mb-6 transition-colors text-lg disabled:opacity-50"
+            disabled={!auth || !db}
           />
           <div className="flex justify-end">
             <button 
               type="submit"
-              className="bg-[#edc515] hover:bg-yellow-500 text-black font-bold py-2.5 px-8 rounded-md transition shadow-[0_0_10px_rgba(237,197,21,0.2)] hover:shadow-[0_0_15px_rgba(237,197,21,0.4)]"
+              disabled={(!auth || !db) || !user}
+              className={`font-bold py-3 px-10 rounded-md transition text-lg 
+                ${((!auth || !db) || !user) 
+                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
+                  : 'bg-[#edc515] hover:bg-yellow-500 text-black shadow-[0_0_10px_rgba(237,197,21,0.2)] hover:shadow-[0_0_15px_rgba(237,197,21,0.4)]'}`}
             >
               Enviar Mensagem
             </button>
           </div>
         </form>
 
-        {/* Lista de comentários */}
         <div className="space-y-5">
-          {comments.map(comentario => (
-            <div key={comentario.id} className="bg-zinc-950 border border-zinc-800 p-5 rounded-lg flex gap-4 hover:border-zinc-700 transition-colors">
-              <img src={comentario.avatar} alt={comentario.autor} className="w-12 h-12 rounded-full border border-[#edc515]/30 shrink-0 object-cover" />
-              <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1">
-                  <span className="font-bold text-[#edc515] text-lg leading-none">{comentario.autor}</span>
-                  <span className="text-xs text-zinc-500 flex items-center gap-1">
-                    <Clock size={12} /> {comentario.data}
-                  </span>
+          {(!auth || !db) ? (
+             <div className="text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">
+                As mensagens da comunidade aparecerão aqui quando o Firebase for conectado.
+             </div>
+          ) : loading ? (
+             <div className="text-center text-[#edc515] py-10 animate-pulse font-medium">
+                A carregar mensagens do servidor...
+             </div>
+          ) : comments.length === 0 ? (
+             <div className="text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">
+                Seja o primeiro a deixar uma mensagem de apoio ao De Sola!
+             </div>
+          ) : (
+            comments.map(comentario => (
+              <div key={comentario.id} className="bg-zinc-950 border border-zinc-800 p-6 rounded-lg flex gap-5 hover:border-zinc-700 transition-colors">
+                <img src={comentario.avatar} alt={comentario.autor} className="w-14 h-14 rounded-full border border-[#edc515]/30 shrink-0 object-cover" />
+                <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-1">
+                    <span className="font-bold text-[#edc515] text-xl leading-none">{comentario.autor}</span>
+                    <span className="text-sm text-zinc-500 flex items-center gap-1">
+                      <Clock size={14} /> {comentario.data}
+                    </span>
+                  </div>
+                  <p className="text-zinc-300 leading-relaxed text-lg">{comentario.texto}</p>
                 </div>
-                <p className="text-zinc-300 leading-relaxed">{comentario.texto}</p>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>
   );
 
-  // TELA 6: Torneios (Classificação)
+  // TELA 6: Torneios
   const renderTorneios = () => {
-    // Definimos os dados que vão para a tabela com base no botão selecionado
     let currentData = [];
     let titulo = "";
     let subtitulo = "";
@@ -595,38 +579,15 @@ export default function App() {
 
     return (
       <div className="space-y-6">
-        {/* Cabeçalho e Seleção de Torneio */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-            <Medal className="text-[#edc515]" size={32} /> Competições
-          </h2>
-          {/* Botões Dinâmicos */}
+          <h2 className="text-3xl font-bold text-white flex items-center gap-3"><Medal className="text-[#edc515]" size={32} /> Competições</h2>
           <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 overflow-x-auto max-w-full">
-            <button 
-              onClick={() => setActiveTournament('paulistao')}
-              className={`font-bold py-2 px-4 rounded-md text-sm transition whitespace-nowrap
-                ${activeTournament === 'paulistao' ? 'bg-[#edc515] text-black shadow-sm' : 'text-zinc-400 hover:text-white'}`}
-            >
-              Paulistão
-            </button>
-            <button 
-              onClick={() => setActiveTournament('warner')}
-              className={`font-bold py-2 px-4 rounded-md text-sm transition whitespace-nowrap
-                ${activeTournament === 'warner' ? 'bg-[#edc515] text-black shadow-sm' : 'text-zinc-400 hover:text-white'}`}
-            >
-              Warner Cup
-            </button>
-            <button 
-              onClick={() => setActiveTournament('brasileirao')}
-              className={`font-bold py-2 px-4 rounded-md text-sm transition whitespace-nowrap
-                ${activeTournament === 'brasileirao' ? 'bg-[#edc515] text-black shadow-sm' : 'text-zinc-400 hover:text-white'}`}
-            >
-              Brasileirão Série A
-            </button>
+            <button onClick={() => setActiveTournament('paulistao')} className={`font-bold py-2 px-4 rounded-md text-sm transition whitespace-nowrap ${activeTournament === 'paulistao' ? 'bg-[#edc515] text-black shadow-sm' : 'text-zinc-400 hover:text-white'}`}>Paulistão</button>
+            <button onClick={() => setActiveTournament('warner')} className={`font-bold py-2 px-4 rounded-md text-sm transition whitespace-nowrap ${activeTournament === 'warner' ? 'bg-[#edc515] text-black shadow-sm' : 'text-zinc-400 hover:text-white'}`}>Warner Cup</button>
+            <button onClick={() => setActiveTournament('brasileirao')} className={`font-bold py-2 px-4 rounded-md text-sm transition whitespace-nowrap ${activeTournament === 'brasileirao' ? 'bg-[#edc515] text-black shadow-sm' : 'text-zinc-400 hover:text-white'}`}>Brasileirão Série A</button>
           </div>
         </div>
 
-        {/* Renderiza a Tabela se houver dados, senão avisa que o torneio não começou */}
         {activeTournament === 'brasileirao' ? (
           <div className="bg-zinc-900 border-2 border-dashed border-zinc-800 p-12 rounded-xl flex flex-col items-center justify-center text-center opacity-70">
             <Calendar className="text-zinc-600 mb-4" size={48} />
@@ -636,90 +597,32 @@ export default function App() {
         ) : (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg animate-fadeIn">
             <div className="bg-zinc-950 p-5 border-b border-zinc-800 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-bold text-white">{titulo}</h3>
-                <p className="text-[#edc515] text-sm mt-1 font-medium">{subtitulo}</p>
-              </div>
+              <div><h3 className="text-xl font-bold text-white">{titulo}</h3><p className="text-[#edc515] text-sm mt-1 font-medium">{subtitulo}</p></div>
             </div>
-            
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="bg-zinc-950 text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
-                    <th className="p-4 w-12 text-center">Pos</th>
-                    <th className="p-4">Clube</th>
-                    <th className="p-4 text-center font-bold text-white" title="Pontos">P</th>
-                    <th className="p-4 text-center" title="Jogos">J</th>
-                    <th className="p-4 text-center" title="Vitórias">V</th>
-                    <th className="p-4 text-center" title="Empates">E</th>
-                    <th className="p-4 text-center" title="Derrotas">D</th>
-                    <th className="p-4 text-center hidden sm:table-cell" title="Golos Marcados">GM</th>
-                    <th className="p-4 text-center hidden sm:table-cell" title="Golos Sofridos">GS</th>
-                    <th className="p-4 text-center" title="Diferença de Golos">DG</th>
+                    <th className="p-4 w-12 text-center">Pos</th><th className="p-4">Clube</th><th className="p-4 text-center font-bold text-white">P</th><th className="p-4 text-center">J</th><th className="p-4 text-center">V</th><th className="p-4 text-center">E</th><th className="p-4 text-center">D</th><th className="p-4 text-center hidden sm:table-cell">GM</th><th className="p-4 text-center hidden sm:table-cell">GS</th><th className="p-4 text-center">DG</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {currentData.map((equipa, index) => (
-                    <tr 
-                      key={equipa.id} 
-                      className={`border-b border-zinc-800/50 hover:bg-zinc-800/80 transition-colors
-                        ${equipa.time === "De Sola FC" ? "bg-[#edc515]/10" : ""}
-                      `}
-                    >
-                      <td className="p-4 text-center">
-                        <span className={`
-                          flex items-center justify-center w-6 h-6 rounded-full mx-auto text-xs font-bold
-                          ${activeTournament === 'paulistao' && index < 8 ? "bg-blue-500/20 text-blue-400" : ""}
-                          ${activeTournament === 'paulistao' && index >= 14 ? "bg-red-500/20 text-red-400" : ""}
-                          ${activeTournament === 'warner' && index === 0 ? "bg-[#edc515] text-black shadow-[0_0_10px_rgba(237,197,21,0.5)]" : ""}
-                          ${(activeTournament === 'paulistao' && index >= 8 && index < 14) || (activeTournament === 'warner' && index > 0) ? "text-zinc-500" : ""}
-                        `}>
-                          {equipa.pos}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <span className={equipa.time === "De Sola FC" ? "text-[#edc515] font-bold text-base" : "text-zinc-300 font-medium"}>
-                            {equipa.time}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-center font-bold text-white text-base">{equipa.p}</td>
-                      <td className="p-4 text-center text-zinc-400">{equipa.j}</td>
-                      <td className="p-4 text-center text-zinc-400">{equipa.v}</td>
-                      <td className="p-4 text-center text-zinc-400">{equipa.e}</td>
-                      <td className="p-4 text-center text-zinc-400">{equipa.d}</td>
-                      <td className="p-4 text-center text-zinc-400 hidden sm:table-cell">{equipa.gp}</td>
-                      <td className="p-4 text-center text-zinc-400 hidden sm:table-cell">{equipa.gc}</td>
-                      <td className="p-4 text-center text-zinc-400 font-medium">
-                        {equipa.gp - equipa.gc > 0 ? `+${equipa.gp - equipa.gc}` : equipa.gp - equipa.gc}
-                      </td>
+                    <tr key={equipa.id} className={`border-b border-zinc-800/50 hover:bg-zinc-800/80 transition-colors ${equipa.time === "De Sola FC" ? "bg-[#edc515]/10" : ""}`}>
+                      <td className="p-4 text-center"><span className={`flex items-center justify-center w-6 h-6 rounded-full mx-auto text-xs font-bold ${activeTournament === 'paulistao' && index < 8 ? "bg-blue-500/20 text-blue-400" : ""} ${activeTournament === 'paulistao' && index >= 14 ? "bg-red-500/20 text-red-400" : ""} ${activeTournament === 'warner' && index === 0 ? "bg-[#edc515] text-black shadow-[0_0_10px_rgba(237,197,21,0.5)]" : ""} ${(activeTournament === 'paulistao' && index >= 8 && index < 14) || (activeTournament === 'warner' && index > 0) ? "text-zinc-500" : ""}`}>{equipa.pos}</span></td>
+                      <td className="p-4"><div className="flex items-center gap-3"><span className={equipa.time === "De Sola FC" ? "text-[#edc515] font-bold text-base" : "text-zinc-300 font-medium"}>{equipa.time}</span></div></td>
+                      <td className="p-4 text-center font-bold text-white text-base">{equipa.p}</td><td className="p-4 text-center text-zinc-400">{equipa.j}</td><td className="p-4 text-center text-zinc-400">{equipa.v}</td><td className="p-4 text-center text-zinc-400">{equipa.e}</td><td className="p-4 text-center text-zinc-400">{equipa.d}</td><td className="p-4 text-center text-zinc-400 hidden sm:table-cell">{equipa.gp}</td><td className="p-4 text-center text-zinc-400 hidden sm:table-cell">{equipa.gc}</td>
+                      <td className="p-4 text-center text-zinc-400 font-medium">{equipa.gp - equipa.gc > 0 ? `+${equipa.gp - equipa.gc}` : equipa.gp - equipa.gc}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            
-            {/* Legenda adaptável */}
             {activeTournament === 'paulistao' && (
-              <div className="p-4 bg-zinc-950 border-t border-zinc-800 flex flex-wrap gap-6 text-xs text-zinc-400 font-medium">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500/50"></div>
-                  <span>Fase Final (Top 8)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                  <span>Despromoção</span>
-                </div>
-              </div>
+              <div className="p-4 bg-zinc-950 border-t border-zinc-800 flex flex-wrap gap-6 text-xs text-zinc-400 font-medium"><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500/50"></div><span>Fase Final (Top 8)</span></div><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div><span>Despromoção</span></div></div>
             )}
             {activeTournament === 'warner' && (
-              <div className="p-4 bg-zinc-950 border-t border-zinc-800 flex flex-wrap gap-6 text-xs text-zinc-400 font-medium">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#edc515] shadow-[0_0_8px_rgba(237,197,21,0.5)]"></div>
-                  <span className="text-[#edc515]">Grande Campeão</span>
-                </div>
-              </div>
+              <div className="p-4 bg-zinc-950 border-t border-zinc-800 flex flex-wrap gap-6 text-xs text-zinc-400 font-medium"><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#edc515] shadow-[0_0_8px_rgba(237,197,21,0.5)]"></div><span className="text-[#edc515]">Grande Campeão</span></div></div>
             )}
           </div>
         )}
@@ -728,10 +631,8 @@ export default function App() {
   };
 
   // ==========================================
-  // 4. RENDERIZAÇÃO GERAL E NAVEGAÇÃO
+  // RENDERIZAÇÃO GERAL E NAVEGAÇÃO
   // ==========================================
-  
-  // Mapeamento das abas para os ícones e rótulos
   const navItems = [
     { id: 'home', label: 'Início', icon: Home },
     { id: 'elenco', label: 'Elenco', icon: Users },
@@ -744,46 +645,30 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-[#edc515] selection:text-black pb-20 md:pb-0">
       
-      {/* CABEÇALHO / NAVBAR DESKTOP */}
       <header className="bg-zinc-950 border-b border-zinc-900 sticky top-0 z-50 hidden md:block">
-        <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
+        <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="w-10 h-10 bg-[#edc515] rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(237,197,21,0.5)]">
               <Shirt className="text-black" size={20} />
             </div>
-            <h1 className="text-2xl font-black tracking-tighter text-white">
-              DE SOLA <span className="text-[#edc515]">FC</span>
-            </h1>
+            <h1 className="text-2xl font-black tracking-tighter text-white">DE SOLA <span className="text-[#edc515]">FC</span></h1>
           </div>
           
           <nav className="flex space-x-1">
             {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2
-                  ${activeTab === item.id 
-                    ? 'bg-[#edc515] text-black' 
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}`}
-              >
-                <item.icon size={18} />
-                {item.label}
+              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${activeTab === item.id ? 'bg-[#edc515] text-black' : 'text-zinc-400 hover:text-white hover:bg-zinc-900'}`}>
+                <item.icon size={18} /> {item.label}
               </button>
             ))}
           </nav>
         </div>
       </header>
 
-      {/* CABEÇALHO MOBILE (Apenas a logo) */}
       <header className="bg-zinc-950 border-b border-zinc-900 p-4 sticky top-0 z-50 md:hidden flex justify-center items-center">
-        <h1 className="text-xl font-black tracking-tighter text-white flex items-center gap-2">
-          <Shirt className="text-[#edc515]" size={20} />
-          DE SOLA <span className="text-[#edc515]">FC</span>
-        </h1>
+        <h1 className="text-xl font-black tracking-tighter text-white flex items-center gap-2"><Shirt className="text-[#edc515]" size={20} /> DE SOLA <span className="text-[#edc515]">FC</span></h1>
       </header>
 
-      {/* CONTEÚDO PRINCIPAL (Muda dependendo da aba selecionada) */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="w-full max-w-[1600px] mx-auto px-4 lg:px-8 py-8 md:py-10">
         {activeTab === 'home' && renderHome()}
         {activeTab === 'elenco' && renderElenco()}
         {activeTab === 'torneios' && renderTorneios()}
@@ -792,15 +677,9 @@ export default function App() {
         {activeTab === 'torcida' && renderTorcida()}
       </main>
 
-      {/* NAVBAR MOBILE (Fixa na parte inferior da tela) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-900 flex justify-around p-2 z-50">
         {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center w-16 py-2 rounded-lg transition
-              ${activeTab === item.id ? 'text-[#edc515]' : 'text-zinc-500'}`}
-          >
+          <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center justify-center w-16 py-2 rounded-lg transition ${activeTab === item.id ? 'text-[#edc515]' : 'text-zinc-500'}`}>
             <item.icon size={24} className={activeTab === item.id ? 'mb-1' : ''} />
             <span className="text-[10px] font-medium">{item.label}</span>
           </button>
