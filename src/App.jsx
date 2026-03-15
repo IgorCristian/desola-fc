@@ -698,7 +698,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      {/* <div className="space-y-6">
         <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-3 flex items-center gap-3">
           <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span> Centro de Treinamento (CT)
         </h3>
@@ -717,7 +717,7 @@ export default function App() {
             <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Departamento Médico</h4><p className="text-zinc-500 text-sm mt-1">Estrutura completa com centro de recuperação e fisioterapia avançada.</p></div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 
