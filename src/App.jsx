@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, UploadCloud, XCircle, Clock, Building, User, Lock, LogOut, PlusCircle } from 'lucide-react';
+import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, CheckCircle, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, UploadCloud, XCircle, Clock, Building, User, Lock, LogOut, PlusCircle } from 'lucide-react';
 
 // ==========================================
 // 1. IMPORTAÇÕES DO FIREBASE (AGORA COM GOOGLE!)
@@ -13,14 +13,27 @@ const MEU_EMAIL_ADMIN = "desolafutebolclube@gmail.com";
 const IMGBB_API_KEY = "c3c7794101dcbe32d9013fcd6c9e1ec6";
 
 // ==========================================
+// 🖼️ FOTOS DA ESTRUTURA (Troque os links aqui!)
+// ==========================================
+const FOTOS_ESTRUTURA = {
+  estadio: "https://i.ibb.co/nMZr3553/Design-sem-nome-1.webp",
+  gramado: "https://i.ibb.co/bRqxLz8D/gramado.webp",
+  arquibancada: "https://i.ibb.co/Dg5dXZxs/arquibancada.webp",
+  vestiario: "https://i.ibb.co/272XXQsd/vestiario.webp",
+  camposAnexos: "https://images.unsplash.com/photo-1551280918-62287950c459?q=80&w=600",
+  academia: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600",
+  medico: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=600"
+};
+
+// ==========================================
 // 2. DADOS SIMULADOS (Mock Data)
 // ==========================================
 const CLUB_INFO = {
   nome: "De Sola FC",
   fundacao: "Fevereiro 2026",
-  tecnico: "Guar De Sola",
+  tecnico: "Guar-De-Sola",
   estadio: {
-    nome: "Estádio Gil Lopes (Gilzão)",
+    nome: "Estádio Gil Lopes (O Gilzão)",
     capacidade: 40000,
     local: "São Paulo, SP"
   },
@@ -28,18 +41,7 @@ const CLUB_INFO = {
   competicoes: ["Campeonato Paulista", "Brasileirão Série A"]
 };
 
-const INITIAL_PLAYERS = [
-  { id: 1, nome: "Guilherme", sobrenome: "BELTRÃO", grupo: "Goleiros", posicao: "Goleiro", numero: 1, img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400&auto=format&fit=crop" },
-  { id: 2, nome: "Bruno", sobrenome: "FORMIGA", grupo: "Defensores", posicao: "Lateral Direito", numero: 2, img: "https://images.unsplash.com/photo-1480455624313-e29b44bbfde1?q=80&w=400&auto=format&fit=crop" },
-  { id: 3, nome: "Luis", sobrenome: "FELIPE", grupo: "Defensores", posicao: "Zagueiro", numero: 3, img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=400&auto=format&fit=crop" },
-  { id: 4, nome: "Aline", sobrenome: "NASTARI", grupo: "Defensores", posicao: "Zagueira", numero: 4, img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop" },
-  { id: 5, nome: "Vitor", sobrenome: "SÉRGIO", grupo: "Meio-campistas", posicao: "Volante", numero: 5, img: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=400&auto=format&fit=crop" },
-  { id: 6, nome: "Jorge", sobrenome: "IGGOR", grupo: "Meio-campistas", posicao: "Meia Central", numero: 8, img: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?q=80&w=400&auto=format&fit=crop" },
-  { id: 7, nome: "Walace", sobrenome: "BORGES", grupo: "Meio-campistas", posicao: "Meia Atacante", numero: 10, img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop" },
-  { id: 8, nome: "Pedro", sobrenome: "CERTEZAS", grupo: "Atacantes", posicao: "Ponta Esquerda", numero: 7, img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop" },
-  { id: 9, nome: "Casimiro", sobrenome: "MIGUEL", grupo: "Atacantes", posicao: "Centroavante", numero: 9, img: "https://images.unsplash.com/photo-1583864697784-a0efc8379f70?q=80&w=400&auto=format&fit=crop" },
-  { id: 10, nome: "Octavio", sobrenome: "NETO", grupo: "Atacantes", posicao: "Ponta Direita", numero: 11, img: "https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=400&auto=format&fit=crop" }
-];
+const INITIAL_PLAYERS = [];
 
 const TROPHIES = [{ id: 1, nome: "Warner Cup", ano: 2026, icone: "🏆" }];
 const MOCK_MATCHES = [
@@ -50,7 +52,7 @@ const MOCK_MATCHES = [
 ];
 const MOCK_NEWS = [
   { id: 1, titulo: "Assim foi a chegada da equipa ao Gilzão", img: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600" },
-  { id: 2, titulo: "Guar De Sola: 'Temos de manter o foco na vitória'", img: "https://images.unsplash.com/photo-1574629810360-7efbb1925536?q=80&w=600" },
+  { id: 2, titulo: "Guar-De-Sola: 'Temos de manter o foco na vitória'", img: "https://images.unsplash.com/photo-1574629810360-7efbb1925536?q=80&w=600" },
   { id: 3, titulo: "Pedro Certezas eleito o melhor em campo", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=600" },
   { id: 4, titulo: "As melhores imagens do último treino", img: "https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=600" }
 ];
@@ -100,10 +102,13 @@ export default function App() {
   const [imageFile, setImageFile] = useState(null);
   const [loginError, setLoginError] = useState("");
   const [firebasePlayers, setFirebasePlayers] = useState([]);
-
   const [formPlayer, setFormPlayer] = useState({
     nome: "", sobrenome: "", grupo: "Goleiros", posicao: "", numero: ""
   });
+  const [firebaseNews, setFirebaseNews] = useState([]);
+  const [isUploadingNews, setIsUploadingNews] = useState(false);
+  const [imageNewsFile, setImageNewsFile] = useState(null);
+  const [formNews, setFormNews] = useState({ titulo: "" });
 
   // ----------------------------------------------------
   // EFEITOS (Conexões com o Firebase)
@@ -144,9 +149,16 @@ export default function App() {
       setFirebasePlayers(fetchedPlayers);
     });
 
+    const unsubscribeNews = onSnapshot(collection(db, 'noticias'), (snapshot) => {
+      const fetchedNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      fetchedNews.sort((a, b) => b.timestamp - a.timestamp); // Mais recentes primeiro
+      setFirebaseNews(fetchedNews);
+    });
+
     return () => {
       unsubscribeComments();
       unsubscribePlayers();
+      unsubscribeNews();
     };
   }, [user]);
 
@@ -245,6 +257,46 @@ export default function App() {
     }
   };
 
+  const handleAddNews = async (e) => {
+    e.preventDefault();
+    
+    if (!formNews.titulo || !imageNewsFile) {
+      alert("Preencha o título e selecione a foto da notícia!");
+      return;
+    }
+
+    setIsUploadingNews(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', imageNewsFile);
+
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const imgData = await res.json();
+
+      if (!imgData.success) throw new Error("Erro no ImgBB");
+
+      await addDoc(collection(db, 'noticias'), {
+        titulo: formNews.titulo,
+        img: imgData.data.url, 
+        timestamp: Date.now()
+      });
+      
+      setFormNews({ titulo: "" });
+      setImageNewsFile(null);
+      document.getElementById("news-file-upload").value = "";
+      alert("Notícia publicada com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar notícia.");
+    } finally {
+      setIsUploadingNews(false);
+    }
+  };
+
   // ==========================================
   // 4. TELAS DO APLICATIVO
   // ==========================================
@@ -269,26 +321,28 @@ export default function App() {
       {/* Hero Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="relative aspect-video lg:aspect-auto bg-zinc-800 rounded-xl overflow-hidden group cursor-pointer min-h-[300px]">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=1000')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105"></div>
+          <div className="absolute inset-0 bg-[url('https://i.ibb.co/nMZr3553/Design-sem-nome-1.webp')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
           <h2 className="absolute bottom-6 left-6 right-6 text-2xl md:text-3xl font-black text-white group-hover:text-[#edc515] transition-colors leading-tight">
-            Adeptos preparam grande festa no Gilzão para o duelo decisivo
+            Adeptos preparam grande festa no Gilzão para o próximo duelo.
           </h2>
         </div>
         <div className="bg-zinc-900 p-8 lg:p-12 rounded-xl flex flex-col justify-center border border-zinc-800 hover:border-[#edc515]/30 transition-colors cursor-pointer group shadow-lg">
           <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 group-hover:text-[#edc515] transition-colors">
             De Sola - Água Santa: <br/><span className="text-zinc-400 text-3xl lg:text-4xl">em busca da liderança no Paulistão</span>
           </h2>
-          <p className="text-zinc-400 text-lg">A equipa comandada por Guar De Sola prepara-se para mais um desafio perante a sua claque apaixonada neste sábado no Estádio Gil Lopes.</p>
+          <p className="text-zinc-400 text-lg">A equipa comandada por Guar-De-Sola prepara-se para mais um desafio perante a sua claque apaixonada neste sábado no Estádio Gil Lopes.</p>
         </div>
       </div>
 
       {/* Notícias */}
-      <div>
-        <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white">Últimas Notícias</h3></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {MOCK_NEWS.map(news => (
-            <div key={news.id} className="cursor-pointer group">
+       <div>
+        <div className="flex justify-between items-end mb-6">
+          <h3 className="text-3xl font-bold text-white">Últimas Notícias</h3>
+        </div>
+        <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          {[...firebaseNews, ...MOCK_NEWS].map((news, index) => (
+            <div key={news.id || `mock-${index}`} className="w-[85vw] sm:w-[280px] lg:w-[23%] shrink-0 snap-start cursor-pointer group">
               <div className="aspect-video bg-zinc-800 rounded-xl overflow-hidden mb-4 relative">
                 <img src={news.img} alt={news.titulo} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#edc515] transition-colors rounded-xl pointer-events-none"></div>
@@ -378,32 +432,51 @@ export default function App() {
   // TELA 2: ELENCO
   const renderElenco = () => {
     const grupos = ["Goleiros", "Defensores", "Meio-campistas", "Atacantes"];
+    // Mistura os jogadores estáticos com os que vieram do Firebase
     const todosOsJogadores = [...INITIAL_PLAYERS, ...firebasePlayers];
+
     return (
-      <div className="space-y-12 animate-fadeIn">
-        <div className="bg-zinc-900 border border-[#edc515]/30 p-8 rounded-xl"><h2 className="text-3xl font-black text-white">{CLUB_INFO.tecnico} (Técnico)</h2></div>
-        {grupos.map(grupo => {
-          const lista = todosOsJogadores.filter(j => j.grupo === grupo);
-          if (lista.length === 0) return null;
-          return (
-            <div key={grupo} className="space-y-6">
-              <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-2">{grupo}</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                {lista.map((jogador, i) => (
-                  <div key={jogador.id || i} className="bg-zinc-900 border border-zinc-800 rounded group overflow-hidden relative">
-                    <div className="absolute top-2 left-3 text-4xl font-black text-white/10 z-10">{jogador.numero}</div>
-                    <img src={jogador.img} className="aspect-[3/4] object-cover group-hover:scale-105 transition-transform" />
-                    <div className="p-4 bg-zinc-950 border-t border-zinc-800">
-                      <p className="text-xs text-zinc-400">{jogador.nome}</p>
-                      <h4 className="font-black text-white uppercase">{jogador.sobrenome}</h4>
-                      <p className="text-[10px] text-[#edc515] font-bold uppercase">{jogador.posicao}</p>
+      <div className="space-y-12">
+        <div className="bg-zinc-900 border border-[#edc515]/30 p-8 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg">
+          <div>
+            <h3 className="text-sm font-bold text-[#edc515] uppercase tracking-widest mb-1">Equipe Técnica</h3>
+            <h2 className="text-3xl font-black text-white">{CLUB_INFO.tecnico}</h2>
+            <p className="text-zinc-400 mt-2">Treinador Principal • Preparando a equipe para a glória no Paulistão</p>
+          </div>
+          <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-[#edc515]/20 shrink-0">
+            <img src="https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?q=80&w=400&auto=format&fit=crop" alt={CLUB_INFO.tecnico} className="w-full h-full object-cover" />
+          </div>
+        </div>
+
+        <div className="space-y-12 mt-8">
+          {grupos.map(grupo => {
+            const jogadoresDoGrupo = todosOsJogadores.filter(j => j.grupo === grupo);
+            if (jogadoresDoGrupo.length === 0) return null;
+
+            return (
+              <div key={grupo} className="animate-fadeIn">
+                <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-3 mb-6 flex items-center gap-3">
+                  <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span>{grupo}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-6">
+                  {jogadoresDoGrupo.map((jogador, idx) => (
+                    <div key={jogador.id || idx} className="bg-zinc-900 border border-zinc-800 relative group overflow-hidden flex flex-col rounded-sm hover:border-[#edc515]/50 transition-all cursor-pointer shadow-md hover:shadow-xl hover:shadow-[#edc515]/5">
+                      <div className="absolute top-2 left-3 text-4xl md:text-5xl font-black text-white/10 group-hover:text-[#edc515]/80 transition-colors z-10 pointer-events-none">{jogador.numero}</div>
+                      <div className="aspect-[3/4] overflow-hidden bg-zinc-800/50">
+                        <img src={jogador.img} alt={jogador.nome} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0" />
+                      </div>
+                      <div className="p-4 bg-zinc-950 border-t border-zinc-800 group-hover:border-[#edc515] transition-colors relative z-20 flex-grow flex flex-col justify-end">
+                        <p className="text-xs text-zinc-400 font-medium mb-0.5">{jogador.nome}</p>
+                        <h4 className="text-lg md:text-xl font-black text-white uppercase leading-none mb-1.5 tracking-wide">{jogador.sobrenome}</h4>
+                        <p className="text-[11px] md:text-xs text-[#edc515] font-bold uppercase tracking-wider">{jogador.posicao}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -413,7 +486,8 @@ export default function App() {
     <div className="space-y-16 animate-fadeIn">
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl relative group cursor-pointer">
         <div className="h-80 md:h-[450px] overflow-hidden">
-          <img src="https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1200" alt="Fachada do Estádio" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
+          {/* 👇 AQUI: A puxar da variável FOTOS_ESTRUTURA */}
+          <img src={FOTOS_ESTRUTURA.estadio} alt="Fachada do Estádio" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
         <div className="absolute bottom-0 left-0 w-full p-6 md:p-10">
@@ -431,16 +505,19 @@ export default function App() {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=600" alt="Gramado" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
-            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Gramado Padrão FIFA</h4><p className="text-zinc-500 text-sm mt-1">Tapete impecável para o estilo de jogo do De Sola.</p></div>
+            {/* 👇 AQUI: Gramado */}
+            <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.gramado} alt="Gramado" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Gramado Padrão FIFA</h4><p className="text-zinc-500 text-sm mt-1">Um verdadeiro tapete para o estilo de jogo do De Sola.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600" alt="Arquibancada" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
-            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Setor da Torcida Organizada</h4><p className="text-zinc-500 text-sm mt-1">Onde a pulsação da claque empurra a equipa.</p></div>
+            {/* 👇 AQUI: Arquibancada */}
+            <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.arquibancada} alt="Arquibancada" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Setor da Torcida Organizada</h4><p className="text-zinc-500 text-sm mt-1">Setor sem cadeiras, o coração da arquibancada que empurra o time.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden relative"><div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div><img src="https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?q=80&w=600" alt="Vestiário" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
-            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Vestiário Principal</h4><p className="text-zinc-500 text-sm mt-1">Onde as preleções históricas do Guar De Sola acontecem.</p></div>
+            {/* 👇 AQUI: Vestiário */}
+            <div className="h-48 overflow-hidden relative"><div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div><img src={FOTOS_ESTRUTURA.vestiario} alt="Vestiário" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Vestiário Principal</h4><p className="text-zinc-500 text-sm mt-1">Onde as preleções históricas do Guar-De-Sola acontecem.</p></div>
           </div>
         </div>
       </div>
@@ -452,16 +529,19 @@ export default function App() {
         <p className="text-zinc-400">Estrutura de ponta para preparar os nossos craques para os maiores desafios da temporada.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1551280918-62287950c459?q=80&w=600" alt="Campos de Treino" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            {/* 👇 AQUI: Campos */}
+            <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.camposAnexos} alt="Campos de Treino" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Campos Anexos</h4><p className="text-zinc-500 text-sm mt-1">Três campos com dimensões oficiais para trabalhos táticos.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600" alt="Academia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            {/* 👇 AQUI: Academia */}
+            <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.academia} alt="Academia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Academia de Alta Performance</h4><p className="text-zinc-500 text-sm mt-1">Equipamentos de última geração para o preparo físico.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            <div className="h-48 overflow-hidden"><img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=600" alt="Departamento Médico" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
-            <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Departamento Médico</h4><p className="text-zinc-500 text-sm mt-1">Centro de recuperação e fisioterapia avançada.</p></div>
+            {/* 👇 AQUI: Departamento Médico */}
+            <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.medico} alt="Departamento Médico" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
+            <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Departamento Médico</h4><p className="text-zinc-500 text-sm mt-1">Estrutura completa com centro de recuperação e fisioterapia avançada.</p></div>
           </div>
         </div>
       </div>
@@ -607,62 +687,150 @@ export default function App() {
   // ==========================================
   const renderAdmin = () => {
     const isAdmin = user && !user.isAnonymous;
+
     if (!isAdmin) {
       return (
-        <div className="max-w-md mx-auto mt-20 bg-zinc-900 p-8 rounded-xl border border-zinc-800 shadow-2xl text-center">
-          <Lock className="mx-auto text-[#edc515] mb-4" size={48} />
-          <h2 className="text-2xl font-black text-white mb-6">Acesso Diretoria</h2>
-          <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold py-3 rounded hover:bg-gray-200 transition shadow-lg">Entrar com o Google</button>
+        <div className="max-w-md mx-auto mt-20 bg-zinc-900 p-8 rounded-xl border border-zinc-800 shadow-2xl animate-fadeIn">
+          <div className="text-center mb-8">
+            <Lock className="mx-auto text-[#edc515] mb-4" size={48} />
+            <h2 className="text-2xl font-black text-white">Acesso Restrito</h2>
+            <p className="text-zinc-400 mt-2">Faça login com a sua conta Google corporativa da Diretoria do De Sola FC</p>
+          </div>
+          
+          {loginError && <div className="bg-red-500/20 text-red-500 border border-red-500/50 p-3 rounded text-center text-sm mb-4">{loginError}</div>}
+          
+          {/* NOVO BOTÃO DE LOGIN DO GOOGLE */}
+          <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold py-3 rounded hover:bg-gray-100 transition shadow-lg">
+            <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Entrar com o Google
+          </button>
         </div>
       );
     }
+
     if (user.email !== MEU_EMAIL_ADMIN) {
       return (
-        <div className="max-w-md mx-auto mt-20 bg-zinc-900 p-8 rounded-xl border border-zinc-800 shadow-2xl text-center">
+        <div className="max-w-md mx-auto mt-20 bg-zinc-900 p-8 rounded-xl border border-zinc-800 shadow-2xl text-center animate-fadeIn">
           <XCircle className="mx-auto text-red-500 mb-4" size={56} />
-          <h2 className="text-xl font-bold text-white">Acesso Negado</h2>
-          <button onClick={handleAdminLogout} className="mt-6 bg-zinc-800 text-white py-2 px-6 rounded">Sair</button>
+          <h2 className="text-2xl font-black text-white">Acesso Negado</h2>
+          <p className="text-zinc-400 mt-2">A conta <strong className="text-white">{user.email}</strong> não tem permissões de Diretoria neste sistema.</p>
+          <button onClick={handleAdminLogout} className="mt-8 bg-zinc-800 text-white font-bold py-3 px-8 rounded hover:bg-zinc-700 transition w-full">
+            Sair e voltar ao site
+          </button>
         </div>
       );
     }
+
     return (
       <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
-        <div className="bg-zinc-900 border border-[#edc515] p-6 rounded-xl flex justify-between items-center">
-          <h2 className="text-xl font-black text-white">Painel da Diretoria</h2>
-          <button onClick={handleAdminLogout} className="text-zinc-400 hover:text-red-500 flex items-center gap-2"><LogOut size={18} /> Sair</button>
+        <div className="bg-zinc-900 border border-[#edc515] p-6 rounded-xl flex justify-between items-center shadow-[0_0_20px_rgba(237,197,21,0.1)]">
+          <div>
+            <h2 className="text-2xl font-black text-white flex items-center gap-3">
+              Painel da Diretoria <CheckCircle className="text-green-500" size={24} />
+            </h2>
+            <p className="text-zinc-400">Logado de forma segura como: <span className="text-[#edc515] font-bold">{user.email}</span></p>
+          </div>
+          <button onClick={handleAdminLogout} className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 px-4 py-2 rounded text-zinc-400 hover:text-red-500 hover:border-red-500 transition">
+            <LogOut size={18} /> Trancar Cofre
+          </button>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><PlusCircle className="text-[#edc515]"/> Contratar Craque</h3>
-          <form onSubmit={handleAddPlayer} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <input type="text" value={formPlayer.nome} onChange={e => setFormPlayer({...formPlayer, nome: e.target.value})} placeholder="Nome" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
-            <input type="text" value={formPlayer.sobrenome} onChange={e => setFormPlayer({...formPlayer, sobrenome: e.target.value})} placeholder="Sobrenome" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
-            <input type="text" value={formPlayer.posicao} onChange={e => setFormPlayer({...formPlayer, posicao: e.target.value})} placeholder="Posição" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
-            <input type="number" value={formPlayer.numero} onChange={e => setFormPlayer({...formPlayer, numero: e.target.value})} placeholder="Número" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
-            <select value={formPlayer.grupo} onChange={e => setFormPlayer({...formPlayer, grupo: e.target.value})} className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]">
-              <option value="Goleiros">Goleiros</option><option value="Defensores">Defensores</option><option value="Meio-campistas">Meio-campistas</option><option value="Atacantes">Atacantes</option>
-            </select>
-            <div>
-              <label className="block text-zinc-400 text-sm mb-1 flex items-center gap-2">
-                <UploadCloud size={16} className="text-[#edc515]"/> Foto do Jogador
-              </label>
-              <input 
-                id="file-upload" 
-                type="file" 
-                accept="image/*" 
-                onChange={e => setImageFile(e.target.files[0])} 
-                disabled={isUploading}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#edc515] file:text-black file:font-bold cursor-pointer" 
-              />
-              <p className="mt-2 text-[10px] text-zinc-500">💡 Use fotos verticais (600x800px).</p>
-            </div>
 
-            {/* Ajuste também o botão de enviar lá no final do form */}
+        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg">
+          <h3 className="text-xl font-bold text-white mb-6 border-b border-zinc-800 pb-4 flex items-center gap-2">
+            <PlusCircle className="text-[#edc515]"/> Contratar Novo Jogador
+          </h3>
+          
+          <form onSubmit={handleAddPlayer} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-zinc-400 text-sm mb-1">Nome de Apresentação (Pequeno)</label>
+                <input type="text" value={formPlayer.nome} onChange={e => setFormPlayer({...formPlayer, nome: e.target.value})} placeholder="Ex: Casimiro" className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 text-white focus:border-[#edc515]" />
+              </div>
+              <div>
+                <label className="block text-zinc-400 text-sm mb-1">Sobrenome da Camisa (Grande)</label>
+                <input type="text" value={formPlayer.sobrenome} onChange={e => setFormPlayer({...formPlayer, sobrenome: e.target.value})} placeholder="Ex: MIGUEL" className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 text-white focus:border-[#edc515]" />
+              </div>
+              <div>
+                <label className="block text-zinc-400 text-sm mb-1">Posição (Detalhada)</label>
+                <input type="text" value={formPlayer.posicao} onChange={e => setFormPlayer({...formPlayer, posicao: e.target.value})} placeholder="Ex: Centroavante" className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 text-white focus:border-[#edc515]" />
+              </div>
+              <div>
+                <label className="block text-zinc-400 text-sm mb-1">Número da Camisa</label>
+                <input type="number" value={formPlayer.numero} onChange={e => setFormPlayer({...formPlayer, numero: e.target.value})} placeholder="Ex: 9" className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 text-white focus:border-[#edc515]" />
+              </div>
+              <div>
+                <label className="block text-zinc-400 text-sm mb-1">Grupo no Elenco</label>
+                <select value={formPlayer.grupo} onChange={e => setFormPlayer({...formPlayer, grupo: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 text-white focus:border-[#edc515]">
+                  <option value="Goleiros">Goleiros</option>
+                  <option value="Defensores">Defensores</option>
+                  <option value="Meio-campistas">Meio-campistas</option>
+                  <option value="Atacantes">Atacantes</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-zinc-400 text-sm mb-1 flex items-center gap-2">
+                  <UploadCloud size={16} className="text-[#edc515]"/> Foto do Jogador
+                </label>
+                <input 
+                  id="file-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={e => setImageFile(e.target.files[0])} 
+                  disabled={isUploading}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#edc515] file:text-black file:font-bold cursor-pointer" 
+                />
+                <p className="mt-2 text-[10px] text-zinc-500">💡 Use fotos verticais (600x800px).</p>
+              </div>
+            </div>
+            
             <button 
               type="submit" 
               disabled={isUploading} 
-              className="md:col-span-2 bg-[#edc515] text-black font-black py-4 rounded hover:bg-yellow-500 transition disabled:opacity-50"
+              className="w-full md:w-auto bg-[#edc515] text-black font-black py-4 px-8 rounded hover:bg-yellow-500 transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isUploading ? "ENVIANDO IMAGEM..." : "ANUNCIAR CONTRATAÇÃO"}
+            </button>
+          </form>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg mt-8">
+          <h3 className="text-xl font-bold text-white mb-6 border-b border-zinc-800 pb-4 flex items-center gap-2">
+            <Newspaper className="text-[#edc515]"/> Publicar Nova Notícia
+          </h3>
+          
+          <form onSubmit={handleAddNews} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-zinc-400 text-sm mb-1">Título da Notícia</label>
+                <input type="text" value={formNews.titulo} onChange={e => setFormNews({...formNews, titulo: e.target.value})} placeholder="Ex: De Sola FC vence mais uma" className="w-full bg-zinc-950 border border-zinc-800 rounded p-3 text-white focus:border-[#edc515]" disabled={isUploadingNews}/>
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-zinc-400 text-sm mb-1 flex items-center gap-2">
+                  <UploadCloud size={16} className="text-[#edc515]"/> Imagem de Capa (Thumbnail)
+                </label>
+                <input 
+                  id="news-file-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={e => setImageNewsFile(e.target.files[0])} 
+                  disabled={isUploadingNews}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#edc515] file:text-black file:font-bold cursor-pointer" 
+                />
+                <p className="mt-2 text-[10px] text-zinc-500">💡 Use fotos horizontais (proporção 16:9, ex: 1280x720px).</p>
+              </div>
+            </div>
+            
+            <button 
+              type="submit" 
+              disabled={isUploadingNews} 
+              className="w-full md:w-auto bg-[#edc515] text-black font-black py-4 px-8 rounded hover:bg-yellow-500 transition shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isUploadingNews ? "PUBLICANDO NOTÍCIA..." : "PUBLICAR NOTÍCIA"}
             </button>
           </form>
         </div>
@@ -696,8 +864,8 @@ export default function App() {
             onDoubleClick={() => setActiveTab('admin')} 
             title="Acesso Diretoria"
           >
-            <div className="w-10 h-10 bg-[#edc515] rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(237,197,21,0.5)]">
-              <img src={LOGO_ESCUDO_URL} className="w-12 h-12 object-contain" />
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img src={LOGO_ESCUDO_URL} className="w-full h-full object-contain" alt="Escudo" />
             </div>
             <h1 className="text-2xl font-black tracking-tighter text-white">DE SOLA <span className="text-[#edc515]">FC</span></h1>
           </div>
@@ -720,7 +888,8 @@ export default function App() {
           className="text-xl font-black tracking-tighter text-white flex items-center gap-2 select-none" 
           onDoubleClick={() => setActiveTab('admin')}
         >
-          <Shirt className="text-[#edc515]" size={20} /> DE SOLA <span className="text-[#edc515]">FC</span>
+          <img src={LOGO_ESCUDO_URL} className="w-8 h-8 object-contain" alt="Escudo" />
+          DE SOLA <span className="text-[#edc515]">FC</span>
         </h1>
       </header>
 
