@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, CheckCircle, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, UploadCloud, XCircle, Clock, Building, User, Lock, LogOut, PlusCircle } from 'lucide-react';
+import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, CheckCircle, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, UploadCloud, XCircle, Clock, Building, User, Lock, LogOut, PlusCircle, Info } from 'lucide-react'; // ⬅️ Adicionado 'Info' aqui
 
 // ==========================================
-// 1. IMPORTAÇÕES DO FIREBASE (AGORA COM GOOGLE!)
+// 1. IMPORTAÇÕES DO FIREBASE
 // ==========================================
 import { signInAnonymously, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc } from 'firebase/firestore';
 import { auth, db } from './firebase'; 
+import AdminTorneios from './AdminTorneios';
 
 const LOGO_ESCUDO_URL = "https://i.ibb.co/RpB4xKZb/Design-sem-nome.png";
 const MEU_EMAIL_ADMIN = "desolafutebolclube@gmail.com"; 
 const IMGBB_API_KEY = "c3c7794101dcbe32d9013fcd6c9e1ec6";
 
 // ==========================================
-// 🖼️ FOTOS DA ESTRUTURA (Troque os links aqui!)
+// 🖼️ FOTOS DA ESTRUTURA
 // ==========================================
 const FOTOS_ESTRUTURA = {
   estadio: "https://i.ibb.co/nMZr3553/Design-sem-nome-1.webp",
@@ -44,42 +45,10 @@ const CLUB_INFO = {
 const INITIAL_PLAYERS = [];
 
 const TROPHIES = [{ id: 1, nome: "Warner Cup", ano: 2026, icone: "🏆" }];
-const MOCK_MATCHES = [
-  { id: 1, comp: "Paulistão", fase: "Jornada 8", equipaC: "De Sola FC", equipaF: "Água Santa", data: "Sábado, 14/03, 16:00 h", estadio: "Estádio Gilzão" },
-  { id: 2, comp: "Brasileirão Série A", fase: "Jornada 1", equipaC: "Flamengo", equipaF: "De Sola FC", data: "Quarta-feira, 18/03, 21:30 h", estadio: "Maracanã" },
-  { id: 3, comp: "Paulistão", fase: "Jornada 9", equipaC: "De Sola FC", equipaF: "Palmeiras", data: "Domingo, 22/03, 16:00 h", estadio: "Estádio Gilzão" },
-  { id: 4, comp: "Brasileirão Série A", fase: "Jornada 2", equipaC: "De Sola FC", equipaF: "Vasco", data: "Domingo, 29/03, 18:00 h", estadio: "Estádio Gilzão" },
-];
-const MOCK_NEWS = [
-  { id: 1, titulo: "Assim foi a chegada da equipa ao Gilzão", img: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600" },
-  { id: 2, titulo: "Guar-De-Sola: 'Temos de manter o foco na vitória'", img: "https://images.unsplash.com/photo-1574629810360-7efbb1925536?q=80&w=600" },
-  { id: 3, titulo: "Pedro Certezas eleito o melhor em campo", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=600" },
-  { id: 4, titulo: "As melhores imagens do último treino", img: "https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=600" }
-];
-const MOCK_TRANSFERS = [
-  { id: 1, jogador: "Léo Moura", posicao: "Lateral Direito", de: "Aposentadoria", escudoDe: "https://ui-avatars.com/api/?name=AP&background=555&color=fff&rounded=true&bold=true", para: "De Sola FC", escudoPara: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", tipo: "CHEGADA", valor: "Custo Zero (Amizade)", img: "https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=400" },
-  { id: 2, jogador: "Luva de Pedreiro", posicao: "Ponta", de: "Europa", escudoDe: "https://ui-avatars.com/api/?name=EU&background=003399&color=fff&rounded=true&bold=true", para: "De Sola FC", escudoPara: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", tipo: "CHEGADA", valor: "Contrato de Imagem", img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400" },
-  { id: 3, jogador: "Deyverson", posicao: "Atacante", de: "Atlético-MG", escudoDe: "https://ui-avatars.com/api/?name=AM&background=000&color=fff&rounded=true&bold=true", para: "De Sola FC", escudoPara: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", tipo: "CHEGADA", valor: "Esforço da Diretoria", img: "https://images.unsplash.com/photo-1574629810360-7efbb1925536?q=80&w=400" },
-  { id: 4, jogador: "Ribamar", posicao: "Centroavante", de: "De Sola FC", escudoDe: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", para: "Vasco", escudoPara: "https://ui-avatars.com/api/?name=VA&background=fff&color=000&rounded=true&bold=true", tipo: "SAÍDA", valor: "Empréstimo", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=400" },
-];
-const MOCK_PAULISTAO_STANDINGS = [
-  { id: 1, pos: 1, time: "De Sola FC", p: 21, j: 8, v: 7, e: 0, d: 1, gp: 18, gc: 5 },
-  { id: 2, pos: 2, time: "Palmeiras", p: 20, j: 8, v: 6, e: 2, d: 0, gp: 15, gc: 4 },
-  { id: 3, pos: 3, time: "São Paulo", p: 18, j: 8, v: 5, e: 3, d: 0, gp: 14, gc: 6 },
-  { id: 4, pos: 4, time: "Corinthians", p: 15, j: 8, v: 4, e: 3, d: 1, gp: 10, gc: 5 },
-  { id: 5, pos: 5, time: "Bragantino", p: 14, j: 8, v: 4, e: 2, d: 2, gp: 11, gc: 8 },
-  { id: 6, pos: 6, time: "Santos", p: 13, j: 8, v: 4, e: 1, d: 3, gp: 12, gc: 10 },
-  { id: 7, pos: 7, time: "Água Santa", p: 11, j: 8, v: 3, e: 2, d: 3, gp: 8, gc: 9 },
-  { id: 8, pos: 8, time: "Mirassol", p: 10, j: 8, v: 2, e: 4, d: 2, gp: 7, gc: 7 },
-  { id: 9, pos: 9, time: "São Bernardo", p: 9, j: 8, v: 2, e: 3, d: 3, gp: 8, gc: 11 },
-  { id: 10, pos: 10, time: "Novorizontino", p: 8, j: 8, v: 2, e: 2, d: 4, gp: 6, gc: 10 },
-  { id: 11, pos: 11, time: "Botafogo-SP", p: 8, j: 8, v: 2, e: 2, d: 4, gp: 5, gc: 9 },
-  { id: 12, pos: 12, time: "Ponte Preta", p: 7, j: 8, v: 1, e: 4, d: 3, gp: 6, gc: 10 },
-  { id: 13, pos: 13, time: "Guarani", p: 6, j: 8, v: 1, e: 3, d: 4, gp: 5, gc: 12 },
-  { id: 14, pos: 14, time: "Ituano", p: 5, j: 8, v: 1, e: 2, d: 5, gp: 4, gc: 12 },
-  { id: 15, pos: 15, time: "Portuguesa", p: 4, j: 8, v: 0, e: 4, d: 4, gp: 3, gc: 11 },
-  { id: 16, pos: 16, time: "Inter de Limeira", p: 2, j: 8, v: 0, e: 2, d: 6, gp: 2, gc: 15 },
-];
+
+const MOCK_NEWS = [];
+const MOCK_TRANSFERS = [];
+
 const MOCK_WARNER_CUP_STANDINGS = [
   { id: 1, pos: 1, time: "De Sola FC", p: 7, j: 4, v: 2, e: 1, d: 1, gp: 4, gc: 4 },
   { id: 2, pos: 2, time: "Beijing Guoan", p: 5, j: 4, v: 1, e: 2, d: 1, gp: 7, gc: 7 },
@@ -109,6 +78,56 @@ export default function App() {
   const [isUploadingNews, setIsUploadingNews] = useState(false);
   const [imageNewsFile, setImageNewsFile] = useState(null);
   const [formNews, setFormNews] = useState({ titulo: "" });
+  const [partidasFirebase, setPartidasFirebase] = useState([]);
+  const [firebaseTransfers, setFirebaseTransfers] = useState([]);
+  const [isUploadingTransfer, setIsUploadingTransfer] = useState(false);
+  const [imageTransferFile, setImageTransferFile] = useState(null);
+  const [formTransfer, setFormTransfer] = useState({
+    tipo: 'CHEGADA', 
+    jogador: '',
+    posicao: '',
+    clubeEnvolvido: '', 
+    valor: ''
+  });
+
+  // 👇 ESTADO DO MODAL DE AVISO 👇
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+
+  // ----------------------------------------------------
+  // EFEITO DO MODAL DE AVISO
+  // ----------------------------------------------------
+  useEffect(() => {
+    // Verifica na memória do navegador se a pessoa já clicou em "Ciente" antes
+    const hasSeenDisclaimer = localStorage.getItem('desola_aviso_lido');
+    if (!hasSeenDisclaimer) {
+      setShowDisclaimer(true);
+    }
+  }, []);
+
+  const handleCloseDisclaimer = () => {
+    localStorage.setItem('desola_aviso_lido', 'true');
+    setShowDisclaimer(false);
+  };
+
+  // ----------------------------------------------------
+  // EFEITO DE AUTO-SCROLL (Rolar para o jogo atual)
+  // ----------------------------------------------------
+  useEffect(() => {
+    // Só rola a tela se estiver na home e se o aviso NÃO estiver na tela
+    if (activeTab === 'home' && !showDisclaimer) {
+      const timer = setTimeout(() => {
+        const elementoProximoJogo = document.getElementById('proxima-partida');
+        const container = document.getElementById('container-partidas'); 
+        
+        if (elementoProximoJogo && container) {
+          const posicaoScroll = elementoProximoJogo.offsetLeft - (container.clientWidth / 2) + (elementoProximoJogo.clientWidth / 2);
+          
+          container.scrollTo({ left: posicaoScroll, behavior: 'smooth' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, partidasFirebase, showDisclaimer]);
 
   // ----------------------------------------------------
   // EFEITOS (Conexões com o Firebase)
@@ -133,7 +152,6 @@ export default function App() {
   useEffect(() => {
     if (!user || !db) return;
 
-    // Escuta os Comentários
     const unsubscribeComments = onSnapshot(collection(db, 'comentarios'), (snapshot) => {
       const fetchedComments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       fetchedComments.sort((a, b) => b.timestamp - a.timestamp);
@@ -141,24 +159,35 @@ export default function App() {
       setLoadingComments(false);
     });
 
-    // Escuta os Jogadores
     const unsubscribePlayers = onSnapshot(collection(db, 'jogadores'), (snapshot) => {
       const fetchedPlayers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Ordena jogadores adicionados por número da camisola
       fetchedPlayers.sort((a, b) => a.numero - b.numero);
       setFirebasePlayers(fetchedPlayers);
     });
 
     const unsubscribeNews = onSnapshot(collection(db, 'noticias'), (snapshot) => {
       const fetchedNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      fetchedNews.sort((a, b) => b.timestamp - a.timestamp); // Mais recentes primeiro
+      fetchedNews.sort((a, b) => b.timestamp - a.timestamp); 
       setFirebaseNews(fetchedNews);
+    });
+
+    const unsubscribePartidas = onSnapshot(collection(db, 'partidas'), (snapshot) => {
+      const fetchedPartidas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPartidasFirebase(fetchedPartidas);
+    });
+
+    const unsubscribeTransfers = onSnapshot(collection(db, 'transferencias'), (snapshot) => {
+      const fetchedTransfers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      fetchedTransfers.sort((a, b) => b.timestamp - a.timestamp); 
+      setFirebaseTransfers(fetchedTransfers);
     });
 
     return () => {
       unsubscribeComments();
       unsubscribePlayers();
       unsubscribeNews();
+      unsubscribePartidas();
+      unsubscribeTransfers();
     };
   }, [user]);
 
@@ -188,13 +217,10 @@ export default function App() {
     }
   };
 
-  // Funções do Admin (AGORA COM GOOGLE)
   const handleGoogleLogin = async () => {
     setLoginError("");
     try {
-      // Cria a "ferramenta" do Google
       const provider = new GoogleAuthProvider();
-      // Abre a janela de pop-up para o usuário escolher a conta Google
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Erro no login com Google:", error);
@@ -205,7 +231,7 @@ export default function App() {
   const handleAdminLogout = async () => {
     try {
       await signOut(auth);
-      setActiveTab('home'); // Ao sair do admin, volta para a home
+      setActiveTab('home'); 
     } catch (error) {
       console.error("Erro ao sair:", error);
     }
@@ -213,15 +239,12 @@ export default function App() {
 
   const handleAddPlayer = async (e) => {
     e.preventDefault();
-    
     if (!formPlayer.nome || !formPlayer.sobrenome || !formPlayer.posicao || !formPlayer.numero || !imageFile) {
       alert("Preencha todos os campos e selecione a foto!");
       return;
     }
-
     setIsUploading(true);
     try {
-      // Envio para o ImgBB
       const formData = new FormData();
       formData.append('image', imageFile);
 
@@ -231,10 +254,8 @@ export default function App() {
       });
       
       const imgData = await res.json();
-
       if (!imgData.success) throw new Error("Erro no ImgBB");
 
-      // Salva no Firebase com o link do ImgBB
       await addDoc(collection(db, 'jogadores'), {
         nome: formPlayer.nome,
         sobrenome: formPlayer.sobrenome.toUpperCase(),
@@ -259,12 +280,10 @@ export default function App() {
 
   const handleAddNews = async (e) => {
     e.preventDefault();
-    
     if (!formNews.titulo || !imageNewsFile) {
       alert("Preencha o título e selecione a foto da notícia!");
       return;
     }
-
     setIsUploadingNews(true);
     try {
       const formData = new FormData();
@@ -276,7 +295,6 @@ export default function App() {
       });
       
       const imgData = await res.json();
-
       if (!imgData.success) throw new Error("Erro no ImgBB");
 
       await addDoc(collection(db, 'noticias'), {
@@ -297,142 +315,305 @@ export default function App() {
     }
   };
 
+  const handleAddTransfer = async (e) => {
+    e.preventDefault();
+    if (!formTransfer.jogador || !formTransfer.clubeEnvolvido || !formTransfer.valor || !imageTransferFile) {
+      alert("Preencha todos os campos e selecione a foto do jogador!");
+      return;
+    }
+    
+    setIsUploadingTransfer(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', imageTransferFile);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+      });
+      const imgData = await res.json();
+      if (!imgData.success) throw new Error("Erro no ImgBB");
+
+      const de = formTransfer.tipo === 'CHEGADA' ? formTransfer.clubeEnvolvido : 'De Sola FC';
+      const para = formTransfer.tipo === 'CHEGADA' ? 'De Sola FC' : formTransfer.clubeEnvolvido;
+
+      await addDoc(collection(db, 'transferencias'), {
+        jogador: formTransfer.jogador,
+        posicao: formTransfer.posicao,
+        tipo: formTransfer.tipo,
+        de: de,
+        para: para,
+        valor: formTransfer.valor,
+        img: imgData.data.url,
+        timestamp: Date.now()
+      });
+      
+      setFormTransfer({ tipo: 'CHEGADA', jogador: '', posicao: '', clubeEnvolvido: '', valor: '' });
+      setImageTransferFile(null);
+      document.getElementById("transfer-file-upload").value = "";
+      alert("Transferência registrada com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar transferência.");
+    } finally {
+      setIsUploadingTransfer(false);
+    }
+  };
+
+  const getTabelaPaulistao = () => {
+    const TIMES_PAULISTAO = [
+      "De Sola FC", "Palmeiras", "São Paulo", "Corinthians", "Bragantino",
+      "Santos", "Primavera", "Mirassol", "São Bernardo", "Novorizontino",
+      "Botafogo-SP", "Ponte Preta", "Guarani", "Ituano", "Ferroviária", "Inter de Limeira"
+    ];
+
+    let tabela = TIMES_PAULISTAO.map(time => ({
+      time: time, p: 0, j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0
+    }));
+
+    partidasFirebase.forEach(jogo => {
+      if (jogo.golsC !== null && jogo.golsF !== null) {
+        const casa = tabela.find(t => t.time === jogo.timeC);
+        const fora = tabela.find(t => t.time === jogo.timeF);
+
+        if (casa && fora) {
+          casa.j += 1; 
+          fora.j += 1;
+          casa.gp += jogo.golsC; 
+          casa.gc += jogo.golsF;
+          fora.gp += jogo.golsF; 
+          fora.gc += jogo.golsC;
+
+          if (jogo.golsC > jogo.golsF) {
+            casa.p += 3; casa.v += 1; fora.d += 1;
+          } else if (jogo.golsC < jogo.golsF) {
+            fora.p += 3; fora.v += 1; casa.d += 1;
+          } else {
+            casa.p += 1; fora.p += 1; casa.e += 1; fora.e += 1; 
+          }
+        }
+      }
+    });
+
+    tabela.sort((a, b) => {
+      if (b.p !== a.p) return b.p - a.p; 
+      if (b.v !== a.v) return b.v - a.v; 
+      const saldoA = a.gp - a.gc;
+      const saldoB = b.gp - b.gc;
+      if (saldoB !== saldoA) return saldoB - saldoA; 
+      return b.gp - a.gp; 
+    });
+
+    return tabela.map((t, index) => ({ ...t, id: index + 1, pos: index + 1 }));
+  };
+
   // ==========================================
   // 4. TELAS DO APLICATIVO
   // ==========================================
 
-  const renderHome = () => (
-    <div className="space-y-12 animate-fadeIn">
-      {/* Barra de Topo */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
-        <div className="flex flex-col text-center md:text-left">
-          <span className="text-zinc-400 text-xs uppercase font-bold tracking-wider">Paulistão • Jornada 8 • Estádio Gilzão</span>
-        </div>
-        <div className="flex items-center gap-4 md:gap-8 text-xl font-bold">
-          <span className="text-white hidden sm:block">De Sola FC</span>
-          <span className="text-white sm:hidden">DSFC</span>
-          <div className="bg-zinc-950 border border-zinc-800 px-4 py-2 rounded-lg text-[#edc515]">16:00</div>
-          <span className="text-zinc-400 hidden sm:block">Água Santa</span>
-          <span className="text-zinc-400 sm:hidden">AGUA</span>
-        </div>
-        <button className="bg-[#edc515] hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-lg transition text-sm w-full md:w-auto">Comprar bilhetes</button>
-      </div>
+  const renderHome = () => {
+    const jogosDoDeSola = [...partidasFirebase]
+      .filter(p => p.timeC === 'De Sola FC' || p.timeF === 'De Sola FC')
+      .sort((a, b) => a.timestamp - b.timestamp);
 
-      {/* Hero Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="relative aspect-video lg:aspect-auto bg-zinc-800 rounded-xl overflow-hidden group cursor-pointer min-h-[300px]">
-          <div className="absolute inset-0 bg-[url('https://i.ibb.co/nMZr3553/Design-sem-nome-1.webp')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-          <h2 className="absolute bottom-6 left-6 right-6 text-2xl md:text-3xl font-black text-white group-hover:text-[#edc515] transition-colors leading-tight">
-            Adeptos preparam grande festa no Gilzão para o próximo duelo.
-          </h2>
-        </div>
-        <div className="bg-zinc-900 p-8 lg:p-12 rounded-xl flex flex-col justify-center border border-zinc-800 hover:border-[#edc515]/30 transition-colors cursor-pointer group shadow-lg">
-          <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 group-hover:text-[#edc515] transition-colors">
-            De Sola - Água Santa: <br/><span className="text-zinc-400 text-3xl lg:text-4xl">em busca da liderança no Paulistão</span>
-          </h2>
-          <p className="text-zinc-400 text-lg">A equipa comandada por Guar-De-Sola prepara-se para mais um desafio perante a sua claque apaixonada neste sábado no Estádio Gil Lopes.</p>
-        </div>
-      </div>
+    const proximaPartidaIndex = jogosDoDeSola.findIndex(p => p.golsC === null);
+    const proximoJogo = proximaPartidaIndex !== -1 ? jogosDoDeSola[proximaPartidaIndex] : null;
 
-      {/* Notícias */}
-       <div>
-        <div className="flex justify-between items-end mb-6">
-          <h3 className="text-3xl font-bold text-white">Últimas Notícias</h3>
-        </div>
-        <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          {[...firebaseNews, ...MOCK_NEWS].map((news, index) => (
-            <div key={news.id || `mock-${index}`} className="w-[85vw] sm:w-[280px] lg:w-[23%] shrink-0 snap-start cursor-pointer group">
-              <div className="aspect-video bg-zinc-800 rounded-xl overflow-hidden mb-4 relative">
-                <img src={news.img} alt={news.titulo} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#edc515] transition-colors rounded-xl pointer-events-none"></div>
-              </div>
-              <h3 className="text-white font-bold text-lg group-hover:text-[#edc515] transition-colors leading-snug">{news.titulo}</h3>
+    return (
+      <div className="space-y-12 animate-fadeIn">
+        
+        {/* BARRA DE TOPO DINÂMICA */}
+        {proximoJogo ? (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
+            <div className="flex flex-col text-center md:text-left">
+              <span className="text-zinc-400 text-xs uppercase font-bold tracking-wider">
+                {proximoJogo.campeonato || "Paulistão"} • {proximoJogo.rodada} • {proximoJogo.estadio || "A definir"}
+              </span>
             </div>
-          ))}
-        </div>
-      </div>
+            
+            <div className="flex items-center justify-center gap-4 md:gap-8 text-xl font-bold w-full md:w-auto">
+              <span className={`hidden sm:block ${proximoJogo.timeC === 'De Sola FC' ? 'text-white' : 'text-zinc-400'}`}>
+                {proximoJogo.timeC}
+              </span>
+              <span className={`sm:hidden ${proximoJogo.timeC === 'De Sola FC' ? 'text-white' : 'text-zinc-400'}`}>
+                {proximoJogo.timeC === 'De Sola FC' ? 'DSFC' : proximoJogo.timeC.substring(0,3).toUpperCase()}
+              </span>
+              
+              <div className="bg-zinc-950 border border-zinc-800 px-4 py-2 rounded-lg text-[#edc515]">
+                16:00
+              </div>
+              
+              <span className={`hidden sm:block ${proximoJogo.timeF === 'De Sola FC' ? 'text-white' : 'text-zinc-400'}`}>
+                {proximoJogo.timeF}
+              </span>
+              <span className={`sm:hidden ${proximoJogo.timeF === 'De Sola FC' ? 'text-white' : 'text-zinc-400'}`}>
+                {proximoJogo.timeF === 'De Sola FC' ? 'DSFC' : proximoJogo.timeF.substring(0,3).toUpperCase()}
+              </span>
+            </div>
 
-      {/* Próximos Eventos */}
-      <div>
-        <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white">Próximos eventos</h3></div>
-        <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          {MOCK_MATCHES.map(match => (
-            <div key={match.id} className="min-w-[300px] md:min-w-[340px] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 snap-start hover:border-[#edc515]/50 transition-colors cursor-pointer group flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-white font-bold text-lg">{match.equipaC}</span>
-                  <div className="flex gap-1 items-center opacity-50"><div className="w-4 h-1 bg-[#edc515] skew-x-[-20deg]"></div><div className="w-4 h-1 bg-[#edc515] skew-x-[-20deg]"></div></div>
-                  <span className="text-white font-bold text-lg">{match.equipaF}</span>
+            <a 
+              href="https://www.youtube.com/@DeSolaOficial" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-[#edc515] hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-lg transition text-sm w-full md:w-auto text-center"
+            >
+              Assistir
+            </a>
+          </div>
+        ) : (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-center shadow-lg">
+            <span className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Sem jogos agendados no momento</span>
+          </div>
+        )}
+
+        {/* Hero Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          <div className="relative w-full h-[300px] md:aspect-video lg:aspect-auto bg-zinc-800 rounded-xl overflow-hidden group cursor-pointer lg:min-h-[350px]">
+            <div className="absolute inset-0 bg-[url('https://i.ibb.co/nMZr3553/Design-sem-nome-1.webp')] bg-cover bg-center transition-transform duration-700 group-hover:scale-105"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+            <h2 className="absolute bottom-6 left-6 right-6 text-xl md:text-3xl font-black text-white group-hover:text-[#edc515] transition-colors leading-tight break-words">
+              Torcedores preparam grande festa no Gilzão para o próximo duelo.
+            </h2>
+          </div>
+          <div className="w-full bg-zinc-900 p-6 md:p-8 lg:p-12 rounded-xl flex flex-col justify-center border border-zinc-800 hover:border-[#edc515]/30 transition-colors cursor-pointer group shadow-lg">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight mb-4 group-hover:text-[#edc515] transition-colors break-words">
+              De Sola <br/><span className="text-zinc-400 text-2xl md:text-3xl lg:text-4xl">em busca da classificação no Paulistão</span>
+            </h2>
+            <p className="text-zinc-400 text-base md:text-lg">A equipe comandada por Guar-De-Sola se prepara para mais um confronto diante da sua torcida na próxima sexta-feira no Estádio Gil Lopes.</p>
+          </div>
+        </div>
+
+        {/* Notícias */}
+        <div>
+          <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white">Últimas Notícias</h3></div>
+          <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            {[...firebaseNews, ...MOCK_NEWS].map((news, index) => (
+              <div key={news.id || `mock-${index}`} className="w-[85vw] sm:w-[280px] lg:w-[23%] shrink-0 snap-start cursor-pointer group">
+                <div className="aspect-video bg-zinc-800 rounded-xl overflow-hidden mb-4 relative">
+                  <img src={news.img} alt={news.titulo} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#edc515] transition-colors rounded-xl pointer-events-none"></div>
                 </div>
-                <div className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-2">Futebol • Equipa Principal</div>
-                <h4 className="text-[#edc515] font-bold text-xl mb-1">{match.comp}</h4>
-                <p className="text-zinc-400 text-sm mb-6">{match.fase}</p>
+                <h3 className="text-white font-bold text-lg group-hover:text-[#edc515] transition-colors leading-snug">{news.titulo}</h3>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-zinc-300 text-sm"><Calendar size={18} className="text-zinc-500" />{match.data}</div>
-                <div className="flex items-center gap-3 text-zinc-300 text-sm"><MapPin size={18} className="text-zinc-500" />{match.estadio}</div>
-              </div>
-              <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between text-[#edc515] group-hover:text-yellow-400 transition-colors">
-                <span className="text-sm font-bold">Mais detalhes</span><ChevronRight size={18} />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Vai e Vem */}
-      <div>
-        <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white flex items-center gap-3">Vai e Vem do Mercado</h3></div>
-        <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          {MOCK_TRANSFERS.map(transfer => {
-            return (
-              <div key={transfer.id} className="min-w-[280px] w-[280px] bg-zinc-900 border border-zinc-800 hover:border-[#edc515]/50 transition-colors rounded-2xl overflow-hidden snap-start flex flex-col relative group shadow-lg">
-                <Shirt className="absolute -right-8 -top-8 text-zinc-800/30 w-48 h-48 -rotate-12 pointer-events-none transition-transform group-hover:scale-110 duration-500" />
-                <div className="p-5 relative z-10">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex flex-col gap-1 text-[11px] font-bold uppercase tracking-wider">
-                      <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1.5 rounded border border-zinc-800">
-                        <img src={transfer.escudoDe} alt={transfer.de} className="w-4 h-4 rounded-full border border-zinc-700 object-cover" />
-                        <span className="text-zinc-500 truncate max-w-[50px]">{transfer.de}</span>
-                        <ArrowRight size={12} className="text-[#edc515] mx-0.5" />
-                        <img src={transfer.escudoPara} alt={transfer.para} className="w-4 h-4 rounded-full border border-[#edc515]/50 object-cover" />
-                        <span className="text-white truncate max-w-[50px]">{transfer.para}</span>
+        {/* Partidas (Linha do Tempo) */}
+        <div>
+          <div className="flex justify-between items-end mb-6">
+            <h3 className="text-3xl font-bold text-white">Partidas</h3>
+          </div>
+          <div id="container-partidas" className="w-full flex gap-6 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] px-4 md:px-0 relative">
+            
+            {jogosDoDeSola.length === 0 ? (
+              <p className="text-zinc-500 italic">Nenhum jogo agendado ainda. Vá na aba Admin para criar a primeira rodada.</p>
+            ) : (
+              jogosDoDeSola.map((match, index) => {
+                const isProxima = index === proximaPartidaIndex; 
+                const isPassada = match.golsC !== null; 
+
+                return (
+                  <div 
+                    key={match.id} 
+                    id={isProxima ? 'proxima-partida' : `partida-${match.id}`}
+                    className={`min-w-[300px] md:min-w-[340px] bg-zinc-900 border rounded-2xl p-6 snap-center shrink-0 cursor-pointer flex flex-col justify-between transition-all duration-300
+                      ${isProxima ? 'border-[#edc515] shadow-[0_0_20px_rgba(237,197,21,0.15)] scale-[1.02] z-10' : 'border-zinc-800 opacity-60 hover:opacity-100 hover:border-[#edc515]/50'}`
+                    }
+                  >
+                    <div>
+                      <div className="mb-4">
+                        {isProxima && <span className="bg-[#edc515] text-black text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded">Próxima Partida</span>}
+                        {isPassada && <span className="bg-zinc-800 text-zinc-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded">Fim de Jogo</span>}
+                        {(!isProxima && !isPassada) && <span className="bg-zinc-800 text-zinc-500 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded">A Realizar</span>}
+                      </div>
+
+                      <div className="flex justify-between items-center mb-6">
+                        <span className={`font-bold text-lg w-24 truncate ${match.timeC === 'De Sola FC' ? 'text-[#edc515]' : 'text-white'}`}>{match.timeC}</span>
+                        
+                        <div className="flex gap-2 items-center text-2xl font-black">
+                          {isPassada ? (
+                            <>
+                              <span className="text-white">{match.golsC}</span>
+                              <span className="text-zinc-600 text-sm font-bold">X</span>
+                              <span className="text-white">{match.golsF}</span>
+                            </>
+                          ) : (
+                            <span className="text-zinc-600 text-sm font-bold opacity-50">VS</span>
+                          )}
+                        </div>
+
+                        <span className={`font-bold text-lg w-24 text-right truncate ${match.timeF === 'De Sola FC' ? 'text-[#edc515]' : 'text-white'}`}>{match.timeF}</span>
+                      </div>
+                      <div className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-2">Equipa Principal</div>
+                      <h4 className={`font-bold text-xl mb-1 ${isProxima ? 'text-[#edc515]' : 'text-zinc-300'}`}>{match.campeonato || 'Paulistão'}</h4>
+                      <p className="text-zinc-400 text-sm mb-6">{match.rodada}</p>
+                    </div>
+                    <div className="pt-4 border-t border-zinc-800 flex items-center gap-3 text-zinc-400 text-sm">
+                      <MapPin size={16} className={isProxima ? "text-[#edc515]" : "text-zinc-600"} />
+                      <span className="truncate">{match.estadio || "A Definir"}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Vai e Vem */}
+        <div>
+          <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white flex items-center gap-3">Vai e Vem do Mercado</h3></div>
+          <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            {(firebaseTransfers.length > 0 ? firebaseTransfers : MOCK_TRANSFERS).map(transfer => {
+  
+              const escudoDeRender = transfer.escudoDe || `https://ui-avatars.com/api/?name=${transfer.de.charAt(0)}&background=${transfer.de === 'De Sola FC' ? 'edc515' : '333'}&color=${transfer.de === 'De Sola FC' ? '000' : 'fff'}&rounded=true&bold=true`;
+              const escudoParaRender = transfer.escudoPara || `https://ui-avatars.com/api/?name=${transfer.para.charAt(0)}&background=${transfer.para === 'De Sola FC' ? 'edc515' : '333'}&color=${transfer.para === 'De Sola FC' ? '000' : 'fff'}&rounded=true&bold=true`;
+
+              return (
+                <div key={transfer.id} className="min-w-[280px] w-[280px] bg-zinc-900 border border-zinc-800 hover:border-[#edc515]/50 transition-colors rounded-2xl overflow-hidden snap-start flex flex-col relative group shadow-lg">
+                  <Shirt className="absolute -right-8 -top-8 text-zinc-800/30 w-48 h-48 -rotate-12 pointer-events-none transition-transform group-hover:scale-110 duration-500" />
+                  <div className="p-5 relative z-10">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col gap-1 text-[11px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5 bg-zinc-950 px-2 py-1.5 rounded border border-zinc-800">
+                          <img src={escudoDeRender} alt={transfer.de} className="w-4 h-4 rounded-full border border-zinc-700 object-cover" />
+                          <span className="text-zinc-500 truncate max-w-[50px]">{transfer.de}</span>
+                          <ArrowRight size={12} className="text-[#edc515] mx-0.5" />
+                          <img src={escudoParaRender} alt={transfer.para} className="w-4 h-4 rounded-full border border-[#edc515]/50 object-cover" />
+                          <span className="text-white truncate max-w-[50px]">{transfer.para}</span>
+                        </div>
+                      </div>
+                      <div className={`${transfer.tipo === 'CHEGADA' ? 'bg-[#edc515] text-black' : 'bg-zinc-700 text-white'} text-[10px] font-black uppercase tracking-widest px-2 py-1.5 rounded-full shadow-lg shrink-0`}>
+                        {transfer.tipo}
                       </div>
                     </div>
-                    <div className={`${transfer.tipo === 'CHEGADA' ? 'bg-[#edc515] text-black' : 'bg-zinc-700 text-white'} text-[10px] font-black uppercase tracking-widest px-2 py-1.5 rounded-full shadow-lg shrink-0`}>
-                      {transfer.tipo}
+                    <h4 className="text-2xl font-black text-white leading-tight mb-1">{transfer.jogador}</h4>
+                    <p className="text-[#edc515] text-xs font-bold uppercase tracking-wider mb-2">{transfer.posicao}</p>
+                  </div>
+                  <div className="relative h-40 w-full bg-zinc-800 z-10 border-y border-zinc-800 overflow-hidden">
+                    <img src={transfer.img} alt={transfer.jogador} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-2 py-1 rounded flex items-center gap-1">Vídeo / Lances</div>
+                  </div>
+                  <div className="p-5 z-10 flex-grow">
+                    <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">{transfer.tipo === 'CHEGADA' ? 'Novo Reforço' : 'Deixou o Clube'}</p>
+                    <p className="text-white font-medium text-sm leading-snug">{transfer.valor}</p>
+                  </div>
+                  <div className="bg-zinc-950 p-4 flex justify-end items-center z-10 border-t border-zinc-800">
+                    <div className="flex gap-2">
+                      <button className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors border border-red-500/20"><ThumbsDown size={14} /></button>
+                      <button className="w-8 h-8 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white flex items-center justify-center transition-colors border border-green-500/20"><ThumbsUp size={14} /></button>
                     </div>
                   </div>
-                  <h4 className="text-2xl font-black text-white leading-tight mb-1">{transfer.jogador}</h4>
-                  <p className="text-[#edc515] text-xs font-bold uppercase tracking-wider mb-2">{transfer.posicao}</p>
                 </div>
-                <div className="relative h-40 w-full bg-zinc-800 z-10 border-y border-zinc-800 overflow-hidden">
-                  <img src={transfer.img} alt={transfer.jogador} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-2 py-1 rounded flex items-center gap-1">Vídeo / Lances</div>
-                </div>
-                <div className="p-5 z-10 flex-grow">
-                  <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">{transfer.tipo === 'CHEGADA' ? 'Novo Reforço' : 'Deixou o Clube'}</p>
-                  <p className="text-white font-medium text-sm leading-snug">{transfer.valor}</p>
-                </div>
-                <div className="bg-zinc-950 p-4 flex justify-end items-center z-10 border-t border-zinc-800">
-                  <div className="flex gap-2">
-                    <button className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors border border-red-500/20"><ThumbsDown size={14} /></button>
-                    <button className="w-8 h-8 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white flex items-center justify-center transition-colors border border-green-500/20"><ThumbsUp size={14} /></button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  // TELA 2: ELENCO
   const renderElenco = () => {
     const grupos = ["Goleiros", "Defensores", "Meio-campistas", "Atacantes"];
-    // Mistura os jogadores estáticos com os que vieram do Firebase
     const todosOsJogadores = [...INITIAL_PLAYERS, ...firebasePlayers];
 
     return (
@@ -444,14 +625,14 @@ export default function App() {
             <p className="text-zinc-400 mt-2">Treinador Principal • Preparando a equipe para a glória no Paulistão</p>
           </div>
           <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-[#edc515]/20 shrink-0">
-            <img src="https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?q=80&w=400&auto=format&fit=crop" alt={CLUB_INFO.tecnico} className="w-full h-full object-cover" />
+            <img src="https://i.ibb.co/4ZfyFzby/5950-1603706955.webp" alt={CLUB_INFO.tecnico} className="w-full h-full object-cover" />
           </div>
         </div>
 
         <div className="space-y-12 mt-8">
           {grupos.map(grupo => {
-            const jogadoresDoGrupo = todosOsJogadores.filter(j => j.grupo === grupo);
-            if (jogadoresDoGrupo.length === 0) return null;
+            const lista = todosOsJogadores.filter(j => j.grupo === grupo);
+            if (lista.length === 0) return null;
 
             return (
               <div key={grupo} className="animate-fadeIn">
@@ -459,7 +640,7 @@ export default function App() {
                   <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span>{grupo}
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-6">
-                  {jogadoresDoGrupo.map((jogador, idx) => (
+                  {lista.map((jogador, idx) => (
                     <div key={jogador.id || idx} className="bg-zinc-900 border border-zinc-800 relative group overflow-hidden flex flex-col rounded-sm hover:border-[#edc515]/50 transition-all cursor-pointer shadow-md hover:shadow-xl hover:shadow-[#edc515]/5">
                       <div className="absolute top-2 left-3 text-4xl md:text-5xl font-black text-white/10 group-hover:text-[#edc515]/80 transition-colors z-10 pointer-events-none">{jogador.numero}</div>
                       <div className="aspect-[3/4] overflow-hidden bg-zinc-800/50">
@@ -481,12 +662,10 @@ export default function App() {
     );
   };
 
-  // TELA 3: Estrutura
   const renderEstrutura = () => (
     <div className="space-y-16 animate-fadeIn">
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl relative group cursor-pointer">
         <div className="h-80 md:h-[450px] overflow-hidden">
-          {/* 👇 AQUI: A puxar da variável FOTOS_ESTRUTURA */}
           <img src={FOTOS_ESTRUTURA.estadio} alt="Fachada do Estádio" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
@@ -505,17 +684,14 @@ export default function App() {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            {/* 👇 AQUI: Gramado */}
             <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.gramado} alt="Gramado" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Gramado Padrão FIFA</h4><p className="text-zinc-500 text-sm mt-1">Um verdadeiro tapete para o estilo de jogo do De Sola.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            {/* 👇 AQUI: Arquibancada */}
             <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.arquibancada} alt="Arquibancada" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Setor da Torcida Organizada</h4><p className="text-zinc-500 text-sm mt-1">Setor sem cadeiras, o coração da arquibancada que empurra o time.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            {/* 👇 AQUI: Vestiário */}
             <div className="h-48 overflow-hidden relative"><div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10"></div><img src={FOTOS_ESTRUTURA.vestiario} alt="Vestiário" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-white font-bold text-lg">Vestiário Principal</h4><p className="text-zinc-500 text-sm mt-1">Onde as preleções históricas do Guar-De-Sola acontecem.</p></div>
           </div>
@@ -529,17 +705,14 @@ export default function App() {
         <p className="text-zinc-400">Estrutura de ponta para preparar os nossos craques para os maiores desafios da temporada.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            {/* 👇 AQUI: Campos */}
             <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.camposAnexos} alt="Campos de Treino" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Campos Anexos</h4><p className="text-zinc-500 text-sm mt-1">Três campos com dimensões oficiais para trabalhos táticos.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            {/* 👇 AQUI: Academia */}
             <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.academia} alt="Academia" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Academia de Alta Performance</h4><p className="text-zinc-500 text-sm mt-1">Equipamentos de última geração para o preparo físico.</p></div>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
-            {/* 👇 AQUI: Departamento Médico */}
             <div className="h-48 overflow-hidden"><img src={FOTOS_ESTRUTURA.medico} alt="Departamento Médico" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /></div>
             <div className="p-4 bg-zinc-950"><h4 className="text-[#edc515] font-bold text-lg">Departamento Médico</h4><p className="text-zinc-500 text-sm mt-1">Estrutura completa com centro de recuperação e fisioterapia avançada.</p></div>
           </div>
@@ -548,7 +721,6 @@ export default function App() {
     </div>
   );
 
-  // TELA 4: Troféus
   const renderTrofeus = () => (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-white flex items-center gap-3"><Trophy className="text-[#edc515]" size={32} /> Galeria de Troféus</h2>
@@ -568,7 +740,6 @@ export default function App() {
     </div>
   );
 
-  // TELA 5: Torcida
   const renderTorcida = () => (
     <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
       <div className="bg-zinc-900 border border-zinc-800 p-6 md:p-10 rounded-xl shadow-lg">
@@ -613,14 +784,13 @@ export default function App() {
     </div>
   );
 
-  // TELA 6: Torneios
   const renderTorneios = () => {
     let currentData = [];
     let titulo = "";
     let subtitulo = "";
 
     if (activeTournament === 'paulistao') {
-      currentData = MOCK_PAULISTAO_STANDINGS;
+      currentData = getTabelaPaulistao();
       titulo = "Classificação Geral - Paulistão 2026";
       subtitulo = "Jornada 8";
     } else if (activeTournament === 'warner') {
@@ -682,9 +852,6 @@ export default function App() {
     );
   };
 
-  // ==========================================
-  // TELA SECRETA: ADMIN
-  // ==========================================
   const renderAdmin = () => {
     const isAdmin = user && !user.isAnonymous;
 
@@ -699,7 +866,6 @@ export default function App() {
           
           {loginError && <div className="bg-red-500/20 text-red-500 border border-red-500/50 p-3 rounded text-center text-sm mb-4">{loginError}</div>}
           
-          {/* NOVO BOTÃO DE LOGIN DO GOOGLE */}
           <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold py-3 rounded hover:bg-gray-100 transition shadow-lg">
             <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -740,7 +906,9 @@ export default function App() {
           </button>
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg">
+        <AdminTorneios />
+
+        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg mt-8">
           <h3 className="text-xl font-bold text-white mb-6 border-b border-zinc-800 pb-4 flex items-center gap-2">
             <PlusCircle className="text-[#edc515]"/> Contratar Novo Jogador
           </h3>
@@ -797,6 +965,7 @@ export default function App() {
             </button>
           </form>
         </div>
+
         <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg mt-8">
           <h3 className="text-xl font-bold text-white mb-6 border-b border-zinc-800 pb-4 flex items-center gap-2">
             <Newspaper className="text-[#edc515]"/> Publicar Nova Notícia
@@ -851,8 +1020,41 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#edc515] selection:text-black pb-20 md:pb-0">
+    <div className="min-h-screen w-full overflow-x-hidden bg-black text-white font-sans selection:bg-[#edc515] selection:text-black pb-20 md:pb-0">
       
+      {/* 👇 MODAL DE AVISO (DISCLAIMER) 👇 */}
+      {showDisclaimer && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-zinc-900 border border-[#edc515]/50 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-[0_0_30px_rgba(237,197,21,0.15)] relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-[#edc515]/20 p-3 rounded-full text-[#edc515]">
+                <Info size={28} />
+              </div>
+              <h2 className="text-2xl font-black text-white">Aviso Importante</h2>
+            </div>
+            
+            <div className="space-y-4 text-zinc-300 text-sm md:text-base leading-relaxed mb-8">
+              <p>
+                Fala Diretoria! Este site é um <strong className="text-white">projeto não oficial</strong> criado de fã para fã, com o único intuito de apoiar e interagir com a série do canal <strong>De Sola</strong>.
+              </p>
+              <p>
+                Nenhuma parte deste projeto é monetizada. Todas as imagens de jogadores e estruturas (como estádio e CT) são <strong>geradas por Inteligência Artificial</strong> apenas para fins de diversão e imersão.
+              </p>
+              <p>
+                Se alguma imagem ou conteúdo causar desconforto, violar regras ou direitos autorais, por favor, entre em contato pelo email <a href={`mailto:${MEU_EMAIL_ADMIN}`} className="text-[#edc515] hover:underline">{MEU_EMAIL_ADMIN}</a> e faremos a remoção imediata.
+              </p>
+            </div>
+            
+            <button 
+              onClick={handleCloseDisclaimer}
+              className="w-full bg-[#edc515] hover:bg-yellow-500 text-black font-black py-4 rounded-xl transition-all shadow-lg text-lg"
+            >
+              Ciente! Vamos pro jogo ⚽
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* CABEÇALHO DESKTOP */}
       <header className="bg-zinc-950 border-b border-zinc-900 sticky top-0 z-50 hidden md:block">
         <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8 h-20 flex items-center justify-between">
