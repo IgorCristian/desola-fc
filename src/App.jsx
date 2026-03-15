@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, CheckCircle, XCircle, Clock, Building, User } from 'lucide-react';
+import { Home, Users, MapPin, Trophy, MessageSquare, CalendarDays, Newspaper, Shirt, ChevronRight, Calendar, Medal, ThumbsUp, ThumbsDown, ArrowRight, UploadCloud, XCircle, Clock, Building, User, Lock, LogOut, PlusCircle } from 'lucide-react';
 
 // ==========================================
-// 1. IMPORTAÇÕES DO FIREBASE (Do ficheiro local)
+// 1. IMPORTAÇÕES DO FIREBASE (AGORA COM GOOGLE!)
 // ==========================================
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { signInAnonymously, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { collection, onSnapshot, addDoc } from 'firebase/firestore';
-import { auth, db } from './firebase'; // Importa a auth e db que configuraste no passo 1
+import { auth, db } from './firebase'; 
+
+const LOGO_ESCUDO_URL = "https://i.ibb.co/RpB4xKZb/Design-sem-nome.png";
+const MEU_EMAIL_ADMIN = "desolafutebolclube@gmail.com"; 
+const IMGBB_API_KEY = "c3c7794101dcbe32d9013fcd6c9e1ec6";
 
 // ==========================================
 // 2. DADOS SIMULADOS (Mock Data)
@@ -20,7 +24,6 @@ const CLUB_INFO = {
     capacidade: 40000,
     local: "São Paulo, SP"
   },
-  
   cores: { principal: "#edc515", secundaria: "#000000" },
   competicoes: ["Campeonato Paulista", "Brasileirão Série A"]
 };
@@ -38,31 +41,25 @@ const INITIAL_PLAYERS = [
   { id: 10, nome: "Octavio", sobrenome: "NETO", grupo: "Atacantes", posicao: "Ponta Direita", numero: 11, img: "https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=400&auto=format&fit=crop" }
 ];
 
-const TROPHIES = [
-  { id: 1, nome: "Warner Cup", ano: 2026, icone: "🏆" }
-];
-
+const TROPHIES = [{ id: 1, nome: "Warner Cup", ano: 2026, icone: "🏆" }];
 const MOCK_MATCHES = [
   { id: 1, comp: "Paulistão", fase: "Jornada 8", equipaC: "De Sola FC", equipaF: "Água Santa", data: "Sábado, 14/03, 16:00 h", estadio: "Estádio Gilzão" },
   { id: 2, comp: "Brasileirão Série A", fase: "Jornada 1", equipaC: "Flamengo", equipaF: "De Sola FC", data: "Quarta-feira, 18/03, 21:30 h", estadio: "Maracanã" },
   { id: 3, comp: "Paulistão", fase: "Jornada 9", equipaC: "De Sola FC", equipaF: "Palmeiras", data: "Domingo, 22/03, 16:00 h", estadio: "Estádio Gilzão" },
   { id: 4, comp: "Brasileirão Série A", fase: "Jornada 2", equipaC: "De Sola FC", equipaF: "Vasco", data: "Domingo, 29/03, 18:00 h", estadio: "Estádio Gilzão" },
 ];
-
 const MOCK_NEWS = [
   { id: 1, titulo: "Assim foi a chegada da equipa ao Gilzão", img: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600" },
   { id: 2, titulo: "Guar De Sola: 'Temos de manter o foco na vitória'", img: "https://images.unsplash.com/photo-1574629810360-7efbb1925536?q=80&w=600" },
   { id: 3, titulo: "Pedro Certezas eleito o melhor em campo", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=600" },
   { id: 4, titulo: "As melhores imagens do último treino", img: "https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=600" }
 ];
-
 const MOCK_TRANSFERS = [
   { id: 1, jogador: "Léo Moura", posicao: "Lateral Direito", de: "Aposentadoria", escudoDe: "https://ui-avatars.com/api/?name=AP&background=555&color=fff&rounded=true&bold=true", para: "De Sola FC", escudoPara: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", tipo: "CHEGADA", valor: "Custo Zero (Amizade)", img: "https://images.unsplash.com/photo-1518605368461-1e1e38ce8058?q=80&w=400" },
   { id: 2, jogador: "Luva de Pedreiro", posicao: "Ponta", de: "Europa", escudoDe: "https://ui-avatars.com/api/?name=EU&background=003399&color=fff&rounded=true&bold=true", para: "De Sola FC", escudoPara: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", tipo: "CHEGADA", valor: "Contrato de Imagem", img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400" },
   { id: 3, jogador: "Deyverson", posicao: "Atacante", de: "Atlético-MG", escudoDe: "https://ui-avatars.com/api/?name=AM&background=000&color=fff&rounded=true&bold=true", para: "De Sola FC", escudoPara: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", tipo: "CHEGADA", valor: "Esforço da Diretoria", img: "https://images.unsplash.com/photo-1574629810360-7efbb1925536?q=80&w=400" },
   { id: 4, jogador: "Ribamar", posicao: "Centroavante", de: "De Sola FC", escudoDe: "https://ui-avatars.com/api/?name=DS&background=edc515&color=000&rounded=true&bold=true", para: "Vasco", escudoPara: "https://ui-avatars.com/api/?name=VA&background=fff&color=000&rounded=true&bold=true", tipo: "SAÍDA", valor: "Empréstimo", img: "https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=400" },
 ];
-
 const MOCK_PAULISTAO_STANDINGS = [
   { id: 1, pos: 1, time: "De Sola FC", p: 21, j: 8, v: 7, e: 0, d: 1, gp: 18, gc: 5 },
   { id: 2, pos: 2, time: "Palmeiras", p: 20, j: 8, v: 6, e: 2, d: 0, gp: 15, gc: 4 },
@@ -81,12 +78,11 @@ const MOCK_PAULISTAO_STANDINGS = [
   { id: 15, pos: 15, time: "Portuguesa", p: 4, j: 8, v: 0, e: 4, d: 4, gp: 3, gc: 11 },
   { id: 16, pos: 16, time: "Inter de Limeira", p: 2, j: 8, v: 0, e: 2, d: 6, gp: 2, gc: 15 },
 ];
-
 const MOCK_WARNER_CUP_STANDINGS = [
-  { id: 1, pos: 1, time: "De Sola FC", p: 9, j: 3, v: 3, e: 0, d: 0, gp: 7, gc: 1 },
-  { id: 2, pos: 2, time: "Time Adversário 1", p: 4, j: 3, v: 1, e: 1, d: 1, gp: 3, gc: 3 },
-  { id: 3, pos: 3, time: "Time Adversário 2", p: 2, j: 3, v: 0, e: 2, d: 1, gp: 2, gc: 4 },
-  { id: 4, pos: 4, time: "Time Adversário 3", p: 1, j: 3, v: 0, e: 1, d: 2, gp: 1, gc: 5 },
+  { id: 1, pos: 1, time: "De Sola FC", p: 7, j: 4, v: 2, e: 1, d: 1, gp: 4, gc: 4 },
+  { id: 2, pos: 2, time: "Beijing Guoan", p: 5, j: 4, v: 1, e: 2, d: 1, gp: 7, gc: 7 },
+  { id: 3, pos: 3, time: "Gimnasia-LP", p: 3, j: 3, v: 0, e: 3, d: 0, gp: 5, gc: 5 },
+  { id: 4, pos: 4, time: "Gil Vicente", p: 2, j: 3, v: 0, e: 2, d: 1, gp: 2, gc: 4 },
 ];
 
 // ==========================================
@@ -95,93 +91,157 @@ const MOCK_WARNER_CUP_STANDINGS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [activeTournament, setActiveTournament] = useState('paulistao');
-  
-  // ESTADOS DO FIREBASE
   const [user, setUser] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [newHandle, setNewHandle] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [loginError, setLoginError] = useState("");
+  const [firebasePlayers, setFirebasePlayers] = useState([]);
 
-  // EFEITO 1: Fazer login anónimo no Firebase automaticamente
+  const [formPlayer, setFormPlayer] = useState({
+    nome: "", sobrenome: "", grupo: "Goleiros", posicao: "", numero: ""
+  });
+
+  // ----------------------------------------------------
+  // EFEITOS (Conexões com o Firebase)
+  // ----------------------------------------------------
   useEffect(() => {
-    // Se não tiver auth configurada, não faz nada
     if (!auth) return;
-
-    const initAuth = async () => {
-      try {
-        await signInAnonymously(auth);
-      } catch (error) {
-        console.error("Erro na autenticação anónima:", error);
+    
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        try {
+          await signInAnonymously(auth);
+        } catch (error) {
+          console.error("Erro no login anónimo:", error);
+        }
       }
-    };
-    initAuth();
-
-    // Ouve mudanças
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
 
-  // EFEITO 2: Buscar os comentários em tempo real
   useEffect(() => {
-    if (!user || !db) {
-      setLoading(false);
-      return;
-    }
+    if (!user || !db) return;
 
-    const commentsRef = collection(db, 'comentarios');
-    
-    const unsubscribe = onSnapshot(commentsRef, (snapshot) => {
-      const fetchedComments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // Ordena do mais recente
+    // Escuta os Comentários
+    const unsubscribeComments = onSnapshot(collection(db, 'comentarios'), (snapshot) => {
+      const fetchedComments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       fetchedComments.sort((a, b) => b.timestamp - a.timestamp);
       setComments(fetchedComments);
-      setLoading(false);
-    }, (error) => {
-      console.error("Erro ao buscar comentários:", error);
-      setLoading(false);
+      setLoadingComments(false);
     });
 
-    return () => unsubscribe();
+    // Escuta os Jogadores
+    const unsubscribePlayers = onSnapshot(collection(db, 'jogadores'), (snapshot) => {
+      const fetchedPlayers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Ordena jogadores adicionados por número da camisola
+      fetchedPlayers.sort((a, b) => a.numero - b.numero);
+      setFirebasePlayers(fetchedPlayers);
+    });
+
+    return () => {
+      unsubscribeComments();
+      unsubscribePlayers();
+    };
   }, [user]);
 
-  // FUNÇÃO: Enviar comentário
+  // ----------------------------------------------------
+  // FUNÇÕES DE AÇÃO
+  // ----------------------------------------------------
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (newComment.trim() === "") return;
-    
-    if (!user || !db) {
-      alert("Aguarde a conexão com o servidor do Firebase.");
-      return;
-    }
+    if (newComment.trim() === "" || !user || !db) return;
     
     let formatHandle = newHandle.trim() === "" ? "Visitante" : newHandle.trim();
-    if (formatHandle !== "Visitante" && !formatHandle.startsWith('@')) {
-      formatHandle = `@${formatHandle}`;
-    }
+    if (formatHandle !== "Visitante" && !formatHandle.startsWith('@')) formatHandle = `@${formatHandle}`;
+    
     const avatarName = formatHandle.replace(/[@_.]/g, '');
 
     try {
-      const commentsRef = collection(db, 'comentarios');
-      await addDoc(commentsRef, {
+      await addDoc(collection(db, 'comentarios'), {
         autor: formatHandle,
         texto: newComment,
         data: new Date().toLocaleDateString('pt-BR'),
         avatar: `https://ui-avatars.com/api/?name=${avatarName || 'V'}&background=edc515&color=000&rounded=true&bold=true`,
         timestamp: Date.now()
       });
-      
-      setNewComment("");
-      setNewHandle("");
+      setNewComment(""); setNewHandle("");
     } catch (error) {
-      console.error("Erro ao salvar comentário:", error);
-      alert("Erro ao enviar mensagem.");
+      console.error("Erro ao salvar:", error);
+    }
+  };
+
+  // Funções do Admin (AGORA COM GOOGLE)
+  const handleGoogleLogin = async () => {
+    setLoginError("");
+    try {
+      // Cria a "ferramenta" do Google
+      const provider = new GoogleAuthProvider();
+      // Abre a janela de pop-up para o usuário escolher a conta Google
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Erro no login com Google:", error);
+      setLoginError("Ocorreu um erro ao tentar fazer login com o Google.");
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await signOut(auth);
+      setActiveTab('home'); // Ao sair do admin, volta para a home
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    }
+  };
+
+  const handleAddPlayer = async (e) => {
+    e.preventDefault();
+    
+    if (!formPlayer.nome || !formPlayer.sobrenome || !formPlayer.posicao || !formPlayer.numero || !imageFile) {
+      alert("Preencha todos os campos e selecione a foto!");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Envio para o ImgBB
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const imgData = await res.json();
+
+      if (!imgData.success) throw new Error("Erro no ImgBB");
+
+      // Salva no Firebase com o link do ImgBB
+      await addDoc(collection(db, 'jogadores'), {
+        nome: formPlayer.nome,
+        sobrenome: formPlayer.sobrenome.toUpperCase(),
+        grupo: formPlayer.grupo,
+        posicao: formPlayer.posicao,
+        numero: parseInt(formPlayer.numero),
+        img: imgData.data.url, 
+        timestamp: Date.now()
+      });
+      
+      setFormPlayer({ nome: "", sobrenome: "", grupo: "Goleiros", posicao: "", numero: "" });
+      setImageFile(null);
+      document.getElementById("file-upload").value = "";
+      alert("Jogador adicionado com sucesso!");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar jogador.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -203,9 +263,7 @@ export default function App() {
           <span className="text-zinc-400 hidden sm:block">Água Santa</span>
           <span className="text-zinc-400 sm:hidden">AGUA</span>
         </div>
-        <button className="bg-[#edc515] hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-lg transition text-sm w-full md:w-auto">
-          Comprar bilhetes
-        </button>
+        <button className="bg-[#edc515] hover:bg-yellow-500 text-black font-bold py-2 px-6 rounded-lg transition text-sm w-full md:w-auto">Comprar bilhetes</button>
       </div>
 
       {/* Hero Section */}
@@ -225,8 +283,9 @@ export default function App() {
         </div>
       </div>
 
-      {/* Notícias em Destaque */}
+      {/* Notícias */}
       <div>
+        <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white">Últimas Notícias</h3></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {MOCK_NEWS.map(news => (
             <div key={news.id} className="cursor-pointer group">
@@ -242,19 +301,14 @@ export default function App() {
 
       {/* Próximos Eventos */}
       <div>
-        <div className="flex justify-between items-end mb-6">
-          <h3 className="text-3xl font-bold text-white">Próximos eventos</h3>
-        </div>
+        <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white">Próximos eventos</h3></div>
         <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {MOCK_MATCHES.map(match => (
             <div key={match.id} className="min-w-[300px] md:min-w-[340px] bg-zinc-900 border border-zinc-800 rounded-2xl p-6 snap-start hover:border-[#edc515]/50 transition-colors cursor-pointer group flex flex-col justify-between shadow-lg">
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-white font-bold text-lg">{match.equipaC}</span>
-                  <div className="flex gap-1 items-center opacity-50">
-                     <div className="w-4 h-1 bg-[#edc515] skew-x-[-20deg]"></div>
-                     <div className="w-4 h-1 bg-[#edc515] skew-x-[-20deg]"></div>
-                  </div>
+                  <div className="flex gap-1 items-center opacity-50"><div className="w-4 h-1 bg-[#edc515] skew-x-[-20deg]"></div><div className="w-4 h-1 bg-[#edc515] skew-x-[-20deg]"></div></div>
                   <span className="text-white font-bold text-lg">{match.equipaF}</span>
                 </div>
                 <div className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-2">Futebol • Equipa Principal</div>
@@ -262,32 +316,20 @@ export default function App() {
                 <p className="text-zinc-400 text-sm mb-6">{match.fase}</p>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center gap-3 text-zinc-300 text-sm">
-                  <Calendar size={18} className="text-zinc-500" />
-                  {match.data}
-                </div>
-                <div className="flex items-center gap-3 text-zinc-300 text-sm">
-                  <MapPin size={18} className="text-zinc-500" />
-                  {match.estadio}
-                </div>
+                <div className="flex items-center gap-3 text-zinc-300 text-sm"><Calendar size={18} className="text-zinc-500" />{match.data}</div>
+                <div className="flex items-center gap-3 text-zinc-300 text-sm"><MapPin size={18} className="text-zinc-500" />{match.estadio}</div>
               </div>
               <div className="mt-6 pt-4 border-t border-zinc-800 flex items-center justify-between text-[#edc515] group-hover:text-yellow-400 transition-colors">
-                <span className="text-sm font-bold">Mais detalhes</span>
-                <ChevronRight size={18} />
+                <span className="text-sm font-bold">Mais detalhes</span><ChevronRight size={18} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Vai e Vem do Mercado */}
+      {/* Vai e Vem */}
       <div>
-        <div className="flex justify-between items-end mb-6">
-          <h3 className="text-3xl font-bold text-white flex items-center gap-3">
-            Vai e Vem do Mercado
-          </h3>
-        </div>
-        
+        <div className="flex justify-between items-end mb-6"><h3 className="text-3xl font-bold text-white flex items-center gap-3">Vai e Vem do Mercado</h3></div>
         <div className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {MOCK_TRANSFERS.map(transfer => {
             return (
@@ -313,24 +355,16 @@ export default function App() {
                 </div>
                 <div className="relative h-40 w-full bg-zinc-800 z-10 border-y border-zinc-800 overflow-hidden">
                   <img src={transfer.img} alt={transfer.jogador} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-2 py-1 rounded flex items-center gap-1">
-                    Vídeo / Lances
-                  </div>
+                  <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-2 py-1 rounded flex items-center gap-1">Vídeo / Lances</div>
                 </div>
                 <div className="p-5 z-10 flex-grow">
-                  <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">
-                    {transfer.tipo === 'CHEGADA' ? 'Novo Reforço' : 'Deixou o Clube'}
-                  </p>
+                  <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider mb-1">{transfer.tipo === 'CHEGADA' ? 'Novo Reforço' : 'Deixou o Clube'}</p>
                   <p className="text-white font-medium text-sm leading-snug">{transfer.valor}</p>
                 </div>
                 <div className="bg-zinc-950 p-4 flex justify-end items-center z-10 border-t border-zinc-800">
                   <div className="flex gap-2">
-                    <button className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors border border-red-500/20">
-                      <ThumbsDown size={14} />
-                    </button>
-                    <button className="w-8 h-8 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white flex items-center justify-center transition-colors border border-green-500/20">
-                      <ThumbsUp size={14} />
-                    </button>
+                    <button className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors border border-red-500/20"><ThumbsDown size={14} /></button>
+                    <button className="w-8 h-8 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500 hover:text-white flex items-center justify-center transition-colors border border-green-500/20"><ThumbsUp size={14} /></button>
                   </div>
                 </div>
               </div>
@@ -341,59 +375,35 @@ export default function App() {
     </div>
   );
 
-  // TELA 2: Elenco
+  // TELA 2: ELENCO
   const renderElenco = () => {
     const grupos = ["Goleiros", "Defensores", "Meio-campistas", "Atacantes"];
-
+    const todosOsJogadores = [...INITIAL_PLAYERS, ...firebasePlayers];
     return (
-      <div className="space-y-12">
-        <div className="bg-zinc-900 border border-[#edc515]/30 p-8 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg">
-          <div>
-            <h3 className="text-sm font-bold text-[#edc515] uppercase tracking-widest mb-1">Equipa Técnica</h3>
-            <h2 className="text-3xl font-black text-white">{CLUB_INFO.tecnico}</h2>
-            <p className="text-zinc-400 mt-2">Treinador Principal • Preparando a equipa para a glória no Paulistão</p>
-          </div>
-          <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-[#edc515]/20 shrink-0">
-            <img src="https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?q=80&w=400&auto=format&fit=crop" alt={CLUB_INFO.tecnico} className="w-full h-full object-cover" />
-          </div>
-        </div>
-
-        <div className="space-y-12 mt-8">
-          {grupos.map(grupo => {
-            const jogadoresDoGrupo = INITIAL_PLAYERS.filter(j => j.grupo === grupo);
-            if (jogadoresDoGrupo.length === 0) return null;
-
-            return (
-              <div key={grupo} className="animate-fadeIn">
-                <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-3 mb-6 flex items-center gap-3">
-                  <span className="w-2 h-8 bg-[#edc515] rounded-sm block"></span>
-                  {grupo}
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-6">
-                  {jogadoresDoGrupo.map(jogador => (
-                    <div key={jogador.id} className="bg-zinc-900 border border-zinc-800 relative group overflow-hidden flex flex-col rounded-sm hover:border-[#edc515]/50 transition-all cursor-pointer shadow-md hover:shadow-xl hover:shadow-[#edc515]/5">
-                      <div className="absolute top-2 left-3 text-4xl md:text-5xl font-black text-white/10 group-hover:text-[#edc515]/80 transition-colors z-10 pointer-events-none">
-                        {jogador.numero}
-                      </div>
-                      <div className="aspect-[3/4] overflow-hidden bg-zinc-800/50">
-                        <img src={jogador.img} alt={jogador.nome} className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700 grayscale-[20%] group-hover:grayscale-0" />
-                      </div>
-                      <div className="p-4 bg-zinc-950 border-t border-zinc-800 group-hover:border-[#edc515] transition-colors relative z-20 flex-grow flex flex-col justify-end">
-                        <p className="text-xs text-zinc-400 font-medium mb-0.5">{jogador.nome}</p>
-                        <h4 className="text-lg md:text-xl font-black text-white uppercase leading-none mb-1.5 tracking-wide">{jogador.sobrenome}</h4>
-                        <p className="text-[11px] md:text-xs text-[#edc515] font-bold uppercase tracking-wider">{jogador.posicao}</p>
-                      </div>
+      <div className="space-y-12 animate-fadeIn">
+        <div className="bg-zinc-900 border border-[#edc515]/30 p-8 rounded-xl"><h2 className="text-3xl font-black text-white">{CLUB_INFO.tecnico} (Técnico)</h2></div>
+        {grupos.map(grupo => {
+          const lista = todosOsJogadores.filter(j => j.grupo === grupo);
+          if (lista.length === 0) return null;
+          return (
+            <div key={grupo} className="space-y-6">
+              <h3 className="text-2xl font-bold text-white border-b border-zinc-800 pb-2">{grupo}</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                {lista.map((jogador, i) => (
+                  <div key={jogador.id || i} className="bg-zinc-900 border border-zinc-800 rounded group overflow-hidden relative">
+                    <div className="absolute top-2 left-3 text-4xl font-black text-white/10 z-10">{jogador.numero}</div>
+                    <img src={jogador.img} className="aspect-[3/4] object-cover group-hover:scale-105 transition-transform" />
+                    <div className="p-4 bg-zinc-950 border-t border-zinc-800">
+                      <p className="text-xs text-zinc-400">{jogador.nome}</p>
+                      <h4 className="font-black text-white uppercase">{jogador.sobrenome}</h4>
+                      <p className="text-[10px] text-[#edc515] font-bold uppercase">{jogador.posicao}</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-        
-        <div className="text-center p-8 border border-dashed border-zinc-800 rounded-xl mt-8">
-          <p className="text-zinc-500">Mercado a decorrer: Aguardando a contratação do resto do plantel...</p>
-        </div>
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -478,19 +488,12 @@ export default function App() {
     </div>
   );
 
-  // TELA 5: Torcida (LIGADA AO FIREBASE)
+  // TELA 5: Torcida
   const renderTorcida = () => (
     <div className="space-y-6 max-w-5xl mx-auto animate-fadeIn">
       <div className="bg-zinc-900 border border-zinc-800 p-6 md:p-10 rounded-xl shadow-lg">
         <h2 className="text-2xl font-bold text-[#edc515] mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
           <span className="flex items-center gap-3"><MessageSquare /> Voz da Torcida</span>
-          
-          {/* Se a auth ou db não existirem, mostra aviso (sinal de que falta ligar algo) */}
-          {(!auth || !db) && (
-            <span className="text-xs bg-red-500/20 text-red-500 border border-red-500/50 px-3 py-1 rounded-full animate-pulse flex items-center gap-1">
-              ⚠️ Banco de Dados Desconectado
-            </span>
-          )}
         </h2>
         
         <form onSubmit={handleAddComment} className="mb-10 bg-zinc-950 p-6 md:p-8 rounded-lg border border-zinc-800">
@@ -498,49 +501,19 @@ export default function App() {
             <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-500 shrink-0">
               <User size={24} />
             </div>
-            <input
-              type="text"
-              value={newHandle}
-              onChange={(e) => setNewHandle(e.target.value)}
-              placeholder="Seu @ (ex: @certezas)"
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-4 text-white focus:outline-none focus:border-[#edc515] transition-colors text-lg disabled:opacity-50"
-              disabled={!auth || !db}
-            />
+            <input type="text" value={newHandle} onChange={(e) => setNewHandle(e.target.value)} placeholder="Seu @ (ex: @certezas)" className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-4 text-white focus:outline-none focus:border-[#edc515] transition-colors text-lg" />
           </div>
-          <textarea 
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder={(!auth || !db) ? "Configure o Firebase primeiro no ficheiro firebase.js..." : "Deixe sua mensagem de apoio ao time..."}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-5 text-white focus:outline-none focus:border-[#edc515] resize-none h-32 mb-6 transition-colors text-lg disabled:opacity-50"
-            disabled={!auth || !db}
-          />
+          <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Deixe sua mensagem de apoio ao time..." className="w-full bg-zinc-900 border border-zinc-700 rounded-md p-5 text-white focus:outline-none focus:border-[#edc515] resize-none h-32 mb-6 transition-colors text-lg" />
           <div className="flex justify-end">
-            <button 
-              type="submit"
-              disabled={(!auth || !db) || !user}
-              className={`font-bold py-3 px-10 rounded-md transition text-lg 
-                ${((!auth || !db) || !user) 
-                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
-                  : 'bg-[#edc515] hover:bg-yellow-500 text-black shadow-[0_0_10px_rgba(237,197,21,0.2)] hover:shadow-[0_0_15px_rgba(237,197,21,0.4)]'}`}
-            >
-              Enviar Mensagem
-            </button>
+            <button type="submit" className="bg-[#edc515] hover:bg-yellow-500 text-black font-bold py-3 px-10 rounded-md transition text-lg shadow-[0_0_10px_rgba(237,197,21,0.2)] hover:shadow-[0_0_15px_rgba(237,197,21,0.4)]">Enviar Mensagem</button>
           </div>
         </form>
 
         <div className="space-y-5">
-          {(!auth || !db) ? (
-             <div className="text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">
-                As mensagens da comunidade aparecerão aqui quando o Firebase for conectado.
-             </div>
-          ) : loading ? (
-             <div className="text-center text-[#edc515] py-10 animate-pulse font-medium">
-                A carregar mensagens do servidor...
-             </div>
+          {loadingComments ? (
+             <div className="text-center text-[#edc515] py-10 animate-pulse font-medium">A carregar mensagens do servidor...</div>
           ) : comments.length === 0 ? (
-             <div className="text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">
-                Seja o primeiro a deixar uma mensagem de apoio ao De Sola!
-             </div>
+             <div className="text-center text-zinc-500 py-10 border border-dashed border-zinc-800 rounded-lg">Seja o primeiro a deixar uma mensagem de apoio ao De Sola!</div>
           ) : (
             comments.map(comentario => (
               <div key={comentario.id} className="bg-zinc-950 border border-zinc-800 p-6 rounded-lg flex gap-5 hover:border-zinc-700 transition-colors">
@@ -548,9 +521,7 @@ export default function App() {
                 <div className="flex-1">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-1">
                     <span className="font-bold text-[#edc515] text-xl leading-none">{comentario.autor}</span>
-                    <span className="text-sm text-zinc-500 flex items-center gap-1">
-                      <Clock size={14} /> {comentario.data}
-                    </span>
+                    <span className="text-sm text-zinc-500 flex items-center gap-1"><Clock size={14} /> {comentario.data}</span>
                   </div>
                   <p className="text-zinc-300 leading-relaxed text-lg">{comentario.texto}</p>
                 </div>
@@ -632,6 +603,74 @@ export default function App() {
   };
 
   // ==========================================
+  // TELA SECRETA: ADMIN
+  // ==========================================
+  const renderAdmin = () => {
+    const isAdmin = user && !user.isAnonymous;
+    if (!isAdmin) {
+      return (
+        <div className="max-w-md mx-auto mt-20 bg-zinc-900 p-8 rounded-xl border border-zinc-800 shadow-2xl text-center">
+          <Lock className="mx-auto text-[#edc515] mb-4" size={48} />
+          <h2 className="text-2xl font-black text-white mb-6">Acesso Diretoria</h2>
+          <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold py-3 rounded hover:bg-gray-200 transition shadow-lg">Entrar com o Google</button>
+        </div>
+      );
+    }
+    if (user.email !== MEU_EMAIL_ADMIN) {
+      return (
+        <div className="max-w-md mx-auto mt-20 bg-zinc-900 p-8 rounded-xl border border-zinc-800 shadow-2xl text-center">
+          <XCircle className="mx-auto text-red-500 mb-4" size={56} />
+          <h2 className="text-xl font-bold text-white">Acesso Negado</h2>
+          <button onClick={handleAdminLogout} className="mt-6 bg-zinc-800 text-white py-2 px-6 rounded">Sair</button>
+        </div>
+      );
+    }
+    return (
+      <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
+        <div className="bg-zinc-900 border border-[#edc515] p-6 rounded-xl flex justify-between items-center">
+          <h2 className="text-xl font-black text-white">Painel da Diretoria</h2>
+          <button onClick={handleAdminLogout} className="text-zinc-400 hover:text-red-500 flex items-center gap-2"><LogOut size={18} /> Sair</button>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-xl shadow-lg">
+          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><PlusCircle className="text-[#edc515]"/> Contratar Craque</h3>
+          <form onSubmit={handleAddPlayer} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <input type="text" value={formPlayer.nome} onChange={e => setFormPlayer({...formPlayer, nome: e.target.value})} placeholder="Nome" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
+            <input type="text" value={formPlayer.sobrenome} onChange={e => setFormPlayer({...formPlayer, sobrenome: e.target.value})} placeholder="Sobrenome" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
+            <input type="text" value={formPlayer.posicao} onChange={e => setFormPlayer({...formPlayer, posicao: e.target.value})} placeholder="Posição" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
+            <input type="number" value={formPlayer.numero} onChange={e => setFormPlayer({...formPlayer, numero: e.target.value})} placeholder="Número" className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]" />
+            <select value={formPlayer.grupo} onChange={e => setFormPlayer({...formPlayer, grupo: e.target.value})} className="bg-zinc-950 border border-zinc-800 p-3 rounded text-white outline-none focus:border-[#edc515]">
+              <option value="Goleiros">Goleiros</option><option value="Defensores">Defensores</option><option value="Meio-campistas">Meio-campistas</option><option value="Atacantes">Atacantes</option>
+            </select>
+            <div>
+              <label className="block text-zinc-400 text-sm mb-1 flex items-center gap-2">
+                <UploadCloud size={16} className="text-[#edc515]"/> Foto do Jogador
+              </label>
+              <input 
+                id="file-upload" 
+                type="file" 
+                accept="image/*" 
+                onChange={e => setImageFile(e.target.files[0])} 
+                disabled={isUploading}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-zinc-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-[#edc515] file:text-black file:font-bold cursor-pointer" 
+              />
+              <p className="mt-2 text-[10px] text-zinc-500">💡 Use fotos verticais (600x800px).</p>
+            </div>
+
+            {/* Ajuste também o botão de enviar lá no final do form */}
+            <button 
+              type="submit" 
+              disabled={isUploading} 
+              className="md:col-span-2 bg-[#edc515] text-black font-black py-4 rounded hover:bg-yellow-500 transition disabled:opacity-50"
+            >
+              {isUploading ? "ENVIANDO IMAGEM..." : "ANUNCIAR CONTRATAÇÃO"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================
   // RENDERIZAÇÃO GERAL E NAVEGAÇÃO
   // ==========================================
   const navItems = [
@@ -646,11 +685,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-[#edc515] selection:text-black pb-20 md:pb-0">
       
+      {/* CABEÇALHO DESKTOP */}
       <header className="bg-zinc-950 border-b border-zinc-900 sticky top-0 z-50 hidden md:block">
         <div className="w-full max-w-[1600px] mx-auto px-4 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('home')}>
+          
+          {/* 👇 A PASSAGEM SECRETA NO DESKTOP 👇 */}
+          <div 
+            className="flex items-center gap-3 cursor-pointer select-none" 
+            onClick={() => setActiveTab('home')} 
+            onDoubleClick={() => setActiveTab('admin')} 
+            title="Acesso Diretoria"
+          >
             <div className="w-10 h-10 bg-[#edc515] rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(237,197,21,0.5)]">
-              <Shirt className="text-black" size={20} />
+              <img src={LOGO_ESCUDO_URL} className="w-12 h-12 object-contain" />
             </div>
             <h1 className="text-2xl font-black tracking-tighter text-white">DE SOLA <span className="text-[#edc515]">FC</span></h1>
           </div>
@@ -665,8 +712,16 @@ export default function App() {
         </div>
       </header>
 
+      {/* CABEÇALHO MOBILE */}
       <header className="bg-zinc-950 border-b border-zinc-900 p-4 sticky top-0 z-50 md:hidden flex justify-center items-center">
-        <h1 className="text-xl font-black tracking-tighter text-white flex items-center gap-2"><Shirt className="text-[#edc515]" size={20} /> DE SOLA <span className="text-[#edc515]">FC</span></h1>
+        
+        {/* 👇 A PASSAGEM SECRETA NO MOBILE 👇 */}
+        <h1 
+          className="text-xl font-black tracking-tighter text-white flex items-center gap-2 select-none" 
+          onDoubleClick={() => setActiveTab('admin')}
+        >
+          <Shirt className="text-[#edc515]" size={20} /> DE SOLA <span className="text-[#edc515]">FC</span>
+        </h1>
       </header>
 
       <main className="w-full max-w-[1600px] mx-auto px-4 lg:px-8 py-8 md:py-10">
@@ -676,6 +731,7 @@ export default function App() {
         {activeTab === 'estrutura' && renderEstrutura()}
         {activeTab === 'trofeus' && renderTrofeus()}
         {activeTab === 'torcida' && renderTorcida()}
+        {activeTab === 'admin' && renderAdmin()}
       </main>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-900 flex justify-around p-2 z-50">
